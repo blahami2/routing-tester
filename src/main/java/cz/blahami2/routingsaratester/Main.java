@@ -202,7 +202,7 @@ Default
         GralPlot instance = new GralPlot( table, mapper );
         instance.display( frame );
         frame.setVisible( true );
-        instance.export( new File( "graph.jpg" ) );
+        instance.export( new File( "graph.png" ) );
 //        frame = new JFrame( "Plot#2" );
 //        frame.setSize( 800, 600 );
 //        frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );

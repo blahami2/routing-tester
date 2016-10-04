@@ -8,5 +8,6 @@ nb-configuration.xml
 routing-sra.iml
 testing_result.csv
 *.png
+*.jpg
 
 
