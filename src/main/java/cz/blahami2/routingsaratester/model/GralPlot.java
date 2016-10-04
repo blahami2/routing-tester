@@ -10,8 +10,11 @@ import cz.certicon.routing.utils.ColorUtils;
 import cz.certicon.routing.utils.EffectiveUtils;
 import de.erichseifert.gral.data.DataSeries;
 import de.erichseifert.gral.data.DataTable;
-import de.erichseifert.gral.data.Row;
 import de.erichseifert.gral.graphics.Label;
+import de.erichseifert.gral.io.data.DataWriter;
+import de.erichseifert.gral.io.data.DataWriterFactory;
+import de.erichseifert.gral.io.plots.DrawableWriter;
+import de.erichseifert.gral.io.plots.DrawableWriterFactory;
 import de.erichseifert.gral.plots.XYPlot;
 import de.erichseifert.gral.plots.lines.DefaultLineRenderer2D;
 import de.erichseifert.gral.plots.lines.LineRenderer;
@@ -20,9 +23,15 @@ import de.erichseifert.gral.plots.points.PointRenderer;
 import de.erichseifert.gral.ui.InteractivePanel;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFrame;
 import lombok.NonNull;
 
@@ -78,6 +87,23 @@ public class GralPlot<T> implements Plot<T> {
 
     @Override
     public void display( @NonNull JFrame frame ) {
+//        plot.getAxisRenderer( XYPlot.AXIS_X ).setIntersection( -Double.MAX_VALUE );
+//        plot.getAxisRenderer( XYPlot.AXIS_Y ).setIntersection( -Double.MAX_VALUE );
+        InteractivePanel interactivePanel = new InteractivePanel( generatePlot() );
+        frame.getContentPane().add( interactivePanel, BorderLayout.CENTER );
+        frame.setMinimumSize( frame.getContentPane().getMinimumSize() );
+        frame.setSize( 1640, 1050 );
+    }
+
+    @Override
+    public void export( File destination ) throws IOException {
+        DrawableWriter writer = DrawableWriterFactory.getInstance().get( "image/png" );
+        try ( OutputStream outputStream = new FileOutputStream( destination ) ) {
+            writer.write( generatePlot(), outputStream, 1680, 1050 );
+        }
+    }
+
+    private XYPlot generatePlot() {
         Class[] typeArray = new Class[1 + yColumns.length];
         EffectiveUtils.fillArray( typeArray, Double.class );
         DataTable data = new DataTable( typeArray );
@@ -132,12 +158,7 @@ public class GralPlot<T> implements Plot<T> {
         maxY = maxY + yBorder;
         plot.getAxis( XYPlot.AXIS_X ).setRange( minX, maxX );
         plot.getAxis( XYPlot.AXIS_Y ).setRange( minY, maxY );
-//        plot.getAxisRenderer( XYPlot.AXIS_X ).setIntersection( -Double.MAX_VALUE );
-//        plot.getAxisRenderer( XYPlot.AXIS_Y ).setIntersection( -Double.MAX_VALUE );
-        InteractivePanel interactivePanel = new InteractivePanel( plot );
-        frame.getContentPane().add( interactivePanel, BorderLayout.CENTER );
-        frame.setMinimumSize( frame.getContentPane().getMinimumSize() );
-        frame.setSize( 1640, 1050 );
+        return plot;
     }
 
 }

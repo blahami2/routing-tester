@@ -6,6 +6,8 @@
 package cz.blahami2.routingsaratester.model;
 
 import cz.blahami2.utils.table.model.Table;
+import java.io.File;
+import java.io.IOException;
 import java.util.function.Function;
 import javax.swing.JFrame;
 
@@ -23,4 +25,6 @@ public interface Plot<T> {
     public void display( JFrame frame );
 
     public void display();
+
+    public void export( File destination ) throws IOException;
 }

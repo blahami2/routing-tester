@@ -110,6 +110,7 @@ Default
         Table<String> table = tableBuilder.build();
         TableExporter exporter = new CsvTableExporter( CsvTableExporter.Delimiter.SEMICOLON );
         exporter.export( new File( "testing_result.csv" ), table, str -> str );
+
     }
 
     public void test() throws IOException {
@@ -170,12 +171,12 @@ Default
         return properties;
     }
 
-    public void testPlot() {
+    public void testPlot() throws IOException {
 
         TableBuilder<String> builder = new DoubleListTableBuilder<>();
-        builder.setHeader( 0, "X");
-        builder.setHeader( 1, "JednaY");
-        builder.setHeader( 2, "DvaY");
+        builder.setHeader( 0, "X" );
+        builder.setHeader( 1, "JednaY" );
+        builder.setHeader( 2, "DvaY" );
         builder.setCell( 0, 0, "A" );
         builder.setCell( 0, 1, "NulaJedna" );
         builder.setCell( 0, 2, "NulaDva" );
@@ -201,6 +202,7 @@ Default
         GralPlot instance = new GralPlot( table, mapper );
         instance.display( frame );
         frame.setVisible( true );
+        instance.export( new File( "graph.jpg" ) );
 //        frame = new JFrame( "Plot#2" );
 //        frame.setSize( 800, 600 );
 //        frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
