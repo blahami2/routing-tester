@@ -1,0 +1,11 @@
+# autogen.sh-generated files
+target
+nbproject
+nbactions.xml
+*.log
+nb-configuration.xml
+.idea
+routing-sra.iml
+testing_result.csv
+
+
