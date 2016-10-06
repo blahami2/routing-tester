@@ -14,6 +14,9 @@ import cz.blahami2.utils.table.data.TableExporter;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
 import cz.blahami2.utils.table.model.Table;
 import cz.blahami2.utils.table.model.TableBuilder;
+import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
+import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
+import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.assembly.Assembler;
 import cz.certicon.routing.algorithm.sara.preprocessing.assembly.GreedyAssembler;
 import cz.certicon.routing.algorithm.sara.preprocessing.filtering.Filter;
@@ -30,6 +33,7 @@ import cz.certicon.routing.model.graph.SaraGraph;
 import cz.certicon.routing.model.graph.preprocessing.ContractGraph;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DisplayUtils;
+import cz.certicon.routing.utils.progress.SimpleProgressListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,7 +52,7 @@ import javax.swing.JFrame;
  */
 public class Main {
 
-    private static final TestOptions DEFAULT_OPTIONS = new TestOptions( 10000, 1, 0.1, 0.03, 0.6, 200 );
+    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 10000, 1, 0.1, 0.03, 0.6, 200, 3 );
 
     /**
      * @param args the command line arguments
@@ -56,12 +60,12 @@ public class Main {
      */
     public static void main( String[] args ) throws IOException {
 //        new Main().run();
-//        new Main().test();
+        new Main().test();
 //        new Main().reduce();
-        new Main().testPlot();
+//        new Main().testPlot();
     }
 
-    private List<String> toList( TestOptions options, TestResult result ) {
+    private List<String> toList( PreprocessingInput options, TestResult result ) {
         List<String> list = new ArrayList<>();
         list.add( Integer.toString( options.getCellSize() ) );
         list.add( Double.toString( options.getCellRatio() ) );
@@ -102,7 +106,7 @@ Default
         Graph graph = graphDAO.loadGraph();
         System.out.println( "Testing cell size..." );
         for ( int cellSize = 500; cellSize < 510; cellSize *= 2 ) {
-            TestOptions options = DEFAULT_OPTIONS.withCellSize( cellSize );
+            PreprocessingInput options = DEFAULT_OPTIONS.withCellSize( cellSize );
             TestRunner runner = new TestRunner( graph, options );
             TestResult result = runner.runForResult();
             tableBuilder.addRow( toList( options, result ) );
@@ -115,28 +119,18 @@ Default
 
     public void test() throws IOException {
         GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
-        TestOptions input = DEFAULT_OPTIONS.withCellSize( 100 ).withNumberOfAssemblyRuns( 1000 );
+        PreprocessingInput input = DEFAULT_OPTIONS.withCellSize( 100 ).withNumberOfAssemblyRuns( 1000 );
         Graph graph = graphDAO.loadGraph();
         TestResult.TestResultBuilder builder = TestResult.builder();
         System.out.println( "Filtering..." );
-        Filter filter = new NaturalCutsFilter( input.getCellRatio(), 1 / input.getCoreRatio(), input.getCellSize() );
-        ContractGraph filteredGraph = filter.filter( graph );
-        System.out.println( "Assembly..." );
-        Assembler assembler = new GreedyAssembler( input.getLowIntervalProbability(), input.getLowIntervalLimit(), input.getCellSize() );
-        MaxIdContainer cellId = new MaxIdContainer( 0 );
-        SaraGraph saraGraph = assembler.assemble( graph, filteredGraph, cellId, 3 );
-        for ( int i = 0; i < input.getNumberOfAssemblyRuns(); i++ ) {
-            SaraGraph assemble = assembler.assemble( graph, filteredGraph, cellId, 3 );
-            int newCount = (int) StreamSupport.stream( assemble.getEdges().spliterator(), true )
-                    .filter( edge -> !edge.getSource().getParent().equals( edge.getTarget().getParent() ) )
-                    .count();
-            int oldCount = (int) StreamSupport.stream( saraGraph.getEdges().spliterator(), true )
-                    .filter( edge -> !edge.getSource().getParent().equals( edge.getTarget().getParent() ) )
-                    .count();
-            if ( newCount < oldCount ) {
-                saraGraph = assemble;
+        Preprocessor preprocessor = new BottomUpPreprocessor();
+        System.out.println( "Preprocessing..." );
+        SaraGraph saraGraph = preprocessor.preprocess( graph, input, new MaxIdContainer( 0 ), new SimpleProgressListener( 10 ) {
+            @Override
+            public void onProgressUpdate( double d ) {
+                System.out.printf( "Done: %.02f %%\n", d );
             }
-        }
+        } );
         System.out.println( "Saving..." );
         graphDAO.saveGraph( saraGraph );
 //        System.out.println( "#cutedges = " + (int) StreamSupport.stream( saraGraph.getEdges().spliterator(), true )
