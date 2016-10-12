@@ -25,15 +25,23 @@ import cz.certicon.routing.data.GraphDAO;
 import cz.certicon.routing.data.GraphDataUpdater;
 import cz.certicon.routing.data.GraphDeleteMessenger;
 import cz.certicon.routing.data.SqliteGraphDAO;
+import cz.certicon.routing.data.SqliteGraphDataDAO;
 import cz.certicon.routing.data.SqliteGraphDataUpdater;
 import cz.certicon.routing.data.processor.GraphComponentSearcher;
 import cz.certicon.routing.model.basic.MaxIdContainer;
+import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
+import cz.certicon.routing.model.graph.Node;
 import cz.certicon.routing.model.graph.SaraGraph;
 import cz.certicon.routing.model.graph.preprocessing.ContractGraph;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DisplayUtils;
+import cz.certicon.routing.utils.RandomUtils;
+import cz.certicon.routing.utils.collections.Iterator;
+import cz.certicon.routing.utils.measuring.TimeLogger;
 import cz.certicon.routing.utils.progress.SimpleProgressListener;
+import cz.certicon.routing.view.DebugViewer;
+import cz.certicon.routing.view.JxDebugViewer;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
@@ -63,6 +72,7 @@ public class Main {
         new Main().test();
 //        new Main().reduce();
 //        new Main().testPlot();
+//        new Main().testVisualiser();
     }
 
     private List<String> toList( PreprocessingInput options, TestResult result ) {
@@ -79,8 +89,8 @@ public class Main {
         list.add( Integer.toString( result.getMedianCellSize() ) );
         list.add( Integer.toString( (int) result.getAverageCellSize() ) );
         list.add( Integer.toString( result.getNumberOfCutEdges() ) );
-        list.add( Long.toString( result.getFilteringTime().getTime( TimeUnits.MILLISECONDS ) ) );
-        list.add( Long.toString( result.getAssemblyTime().getTime( TimeUnits.MILLISECONDS ) ) );
+        list.add( Long.toString( result.getFilteringTime().getValue( TimeUnits.MILLISECONDS ) ) );
+        list.add( Long.toString( result.getAssemblyTime().getValue( TimeUnits.MILLISECONDS ) ) );
         return list;
     }
 
@@ -105,7 +115,7 @@ Default
         GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
         Graph graph = graphDAO.loadGraph();
         System.out.println( "Testing cell size..." );
-        for ( int cellSize = 500; cellSize < 510; cellSize *= 2 ) {
+        for ( int cellSize = 100; cellSize < 10000; cellSize *= 2 ) {
             PreprocessingInput options = DEFAULT_OPTIONS.withCellSize( cellSize );
             TestRunner runner = new TestRunner( graph, options );
             TestResult result = runner.runForResult();
@@ -119,20 +129,34 @@ Default
 
     public void test() throws IOException {
         GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
-        PreprocessingInput input = DEFAULT_OPTIONS.withCellSize( 100 ).withNumberOfAssemblyRuns( 1000 );
+//        PreprocessingInput input = DEFAULT_OPTIONS.withCellSize( 100 ).withNumberOfAssemblyRuns( 100 ).withNumberOfLayers( 1 );
+        RandomUtils.setSeed( 123 );
+        PreprocessingInput input = DEFAULT_OPTIONS
+                .withCellSize( 20 )
+                .withCellRatio( 1 )
+                .withCoreRatio( 0.1 )
+                .withLowIntervalProbability( 0.03 )
+                .withLowIntervalLimit( 0.6 )
+                .withNumberOfAssemblyRuns( 100 )
+                .withNumberOfLayers( 5 );
         Graph graph = graphDAO.loadGraph();
         TestResult.TestResultBuilder builder = TestResult.builder();
-        System.out.println( "Filtering..." );
+//        System.out.println( "Filtering..." );
         Preprocessor preprocessor = new BottomUpPreprocessor();
         System.out.println( "Preprocessing..." );
         SaraGraph saraGraph = preprocessor.preprocess( graph, input, new MaxIdContainer( 0 ), new SimpleProgressListener( 10 ) {
             @Override
             public void onProgressUpdate( double d ) {
-                System.out.printf( "Done: %.02f %%\n", d );
+                System.out.printf( "Done: %d %%\n", (int) ( d * 100 ) );
             }
         } );
         System.out.println( "Saving..." );
         graphDAO.saveGraph( saraGraph );
+        TimeLogger.setTimeUnits( TimeUnits.MILLISECONDS );
+        int divisor = input.getNumberOfAssemblyRuns() * input.getNumberOfLayers();
+        System.out.println( "Filtering time = " + TimeLogger.getTimeMeasurement( TimeLogger.Event.FILTERING ).getTime().toString() );
+        System.out.println( "Assembly time = " + TimeLogger.getTimeMeasurement( TimeLogger.Event.ASSEMBLING ).getTime().toString() );
+        System.out.println( "Assembly time/per unit = " + TimeLogger.getTimeMeasurement( TimeLogger.Event.ASSEMBLING ).getTime().divide( divisor ).toString() );
 //        System.out.println( "#cutedges = " + (int) StreamSupport.stream( saraGraph.getEdges().spliterator(), true )
 //                .filter( edge -> !edge.getSource().getParent().equals( edge.getTarget().getParent() ) )
 //                .count() );
@@ -203,5 +227,35 @@ Default
 //        instance.setData( table, mapper, 0, 1 );
 //        instance.display( frame );
 //        frame.setVisible( true );
+    }
+
+    public void testVisualiser() throws IOException {
+        Properties properties = loadProperties();
+        GraphDAO graphDAO = new SqliteGraphDAO( properties );
+        Graph graph = graphDAO.loadGraph();
+        DebugViewer viewer = new JxDebugViewer( new SqliteGraphDataDAO( properties ), graph, 500 );
+        Random rand = new Random();
+        List<Long> addedEdges = new ArrayList<>();
+        for ( int i = 0; i < 20; i++ ) {
+            int cnt = rand.nextInt( graph.getEdgeCount() );
+            Iterator edges = graph.getEdges();
+            for ( int j = 0; j < cnt - 1; j++ ) {
+                edges.next();
+            }
+            long edgeId = ( (Edge) edges.next() ).getId();
+            viewer.displayEdge( edgeId );
+            addedEdges.add( edgeId );
+        }
+        for ( int i = 0; i < 20; i++ ) {
+            int cnt = rand.nextInt( graph.getNodesCount() );
+            Iterator nodes = graph.getNodes();
+            for ( int j = 0; j < cnt - 1; j++ ) {
+                nodes.next();
+            }
+            viewer.displayNode( ( (Node) nodes.next() ).getId() );
+        }
+        for ( int i = 0; i < 10; i++ ) {
+            viewer.closeEdge( addedEdges.get( i ) );
+        }
     }
 }
