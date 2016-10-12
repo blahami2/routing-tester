@@ -16,5 +16,4 @@ public class ResultComparator {
     public boolean isValid( Output expected, Output actual ) {
         return expected.equals( actual );
     }
-
 }

@@ -6,9 +6,12 @@
 package cz.blahami2.routingsaratester.model;
 
 import cz.certicon.routing.model.Identifiable;
+import cz.certicon.routing.model.RouteData;
+import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.Time;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 
@@ -24,4 +27,8 @@ public class OutputElement implements Identifiable {
     Length length;
     Time time;
     List<Long> edgeIds;
+
+    public static OutputElement fromRoute( long id, RouteData<? extends Edge> routeData ) {
+        return new OutputElement( id, routeData.getLength(), routeData.getTime(), routeData.getEdges().stream().map( e -> e.getId() ).collect( Collectors.toList() ) );
+    }
 }
