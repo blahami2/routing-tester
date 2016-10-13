@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -36,6 +37,14 @@ public class Input implements Iterable<InputElement> {
     @Override
     public Iterator<InputElement> iterator() {
         return map.valueCollection().iterator();
+    }
+
+    public Stream<InputElement> stream() {
+        return StreamSupport.stream( spliterator(), false );
+    }
+
+    public Stream<InputElement> stream( boolean parallel ) {
+        return StreamSupport.stream( spliterator(), parallel );
     }
 
     @Override

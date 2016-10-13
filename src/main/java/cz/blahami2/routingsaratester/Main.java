@@ -5,6 +5,9 @@
  */
 package cz.blahami2.routingsaratester;
 
+import cz.blahami2.routingsaratester.generator.controller.DataSetController;
+import cz.blahami2.routingsaratester.generator.data.FileInputDAO;
+import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.logic.TestRunner;
 import cz.blahami2.routingsaratester.model.GralPlot;
 import cz.blahami2.routingsaratester.model.TestOptions;
@@ -27,13 +30,16 @@ import cz.certicon.routing.data.GraphDeleteMessenger;
 import cz.certicon.routing.data.SqliteGraphDAO;
 import cz.certicon.routing.data.SqliteGraphDataDAO;
 import cz.certicon.routing.data.SqliteGraphDataUpdater;
+import cz.certicon.routing.data.basic.FileDataDestination;
 import cz.certicon.routing.data.processor.GraphComponentSearcher;
 import cz.certicon.routing.model.basic.MaxIdContainer;
 import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
+import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.graph.Node;
 import cz.certicon.routing.model.graph.SaraGraph;
 import cz.certicon.routing.model.graph.preprocessing.ContractGraph;
+import cz.certicon.routing.model.values.Distance;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DisplayUtils;
 import cz.certicon.routing.utils.RandomUtils;
@@ -68,11 +74,13 @@ public class Main {
      * @throws java.io.IOException coz i can
      */
     public static void main( String[] args ) throws IOException {
-//        new Main().run();
-        new Main().test();
-//        new Main().reduce();
-//        new Main().testPlot();
-//        new Main().testVisualiser();
+        Main main = new Main();
+//        main.run();
+//        main.test();
+//        main.reduce();
+//        main.testPlot();
+//        main.testVisualiser();
+        main.generate();
     }
 
     private List<String> toList( PreprocessingInput options, TestResult result ) {
@@ -258,4 +266,16 @@ Default
             viewer.closeEdge( addedEdges.get( i ) );
         }
     }
+
+    private void generate() {
+        DataSetController controller = new DataSetController(
+                new FileInputDAO(),
+                new FileDataDestination( new File( "dataset.txt" ) ),
+                100,
+                Distance.newInstance( 40000 ),
+                Metric.LENGTH
+        );
+        controller.run();
+    }
+
 }

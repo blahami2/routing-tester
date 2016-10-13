@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.logic;
+package cz.blahami2.routingsaratester.generator.logic;
 
 import cz.blahami2.routingsaratester.utils.Iterators;
 import cz.certicon.routing.model.basic.Pair;

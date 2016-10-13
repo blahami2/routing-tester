@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.data;
+package cz.blahami2.routingsaratester.generator.data;
 
 import cz.blahami2.routingsaratester.model.Input;
 import cz.certicon.routing.data.basic.DataDestination;

@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.data;
+package cz.blahami2.routingsaratester.generator.data;
 
 import cz.blahami2.routingsaratester.model.Input;
 import cz.blahami2.routingsaratester.model.InputElement;
@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;

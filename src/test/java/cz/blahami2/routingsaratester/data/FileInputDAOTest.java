@@ -5,6 +5,7 @@
  */
 package cz.blahami2.routingsaratester.data;
 
+import cz.blahami2.routingsaratester.generator.data.FileInputDAO;
 import cz.blahami2.routingsaratester.model.Input;
 import cz.blahami2.routingsaratester.model.InputElement;
 import cz.certicon.routing.data.basic.DataDestination;
