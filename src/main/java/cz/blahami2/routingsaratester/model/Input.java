@@ -9,10 +9,12 @@ import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.TimeUnits;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,7 +38,9 @@ public class Input implements Iterable<InputElement> {
 
     @Override
     public Iterator<InputElement> iterator() {
-        return map.valueCollection().iterator();
+        List<InputElement> elements = new ArrayList<>( map.valueCollection() );
+        elements.sort( Comparator.comparing( InputElement::getId ) );
+        return elements.iterator();
     }
 
     public Stream<InputElement> stream() {

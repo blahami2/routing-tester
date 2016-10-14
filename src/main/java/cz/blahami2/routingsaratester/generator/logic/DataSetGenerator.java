@@ -21,6 +21,7 @@ import cz.certicon.routing.utils.java8.Optional;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +37,7 @@ public class DataSetGenerator {
     private static final int INTERVALS = 10;
     private static final int MAX_ATTEMPTS_PER_UNIT = 1000;
 
-    public <N extends Node<N, E>, E extends Edge<N, E>> Collection<DataSetElement<N, E>> generateDataSet( int size, Distance estimatedMaximalDistance, Metric metric, Graph<N, E> graph ) {
+    public <N extends Node<N, E>, E extends Edge<N, E>> List<DataSetElement<N, E>> generateDataSet( int size, Distance estimatedMaximalDistance, Metric metric, Graph<N, E> graph ) {
         RoutingAlgorithm<N, E> algorithm = new DijkstraAlgorithm<>();
         int range = (int) estimatedMaximalDistance.getValue();
         int intervals = INTERVALS;
@@ -89,7 +90,12 @@ public class DataSetGenerator {
                 }
             }
         }
-        return intervalList.stream().flatMap( x -> x.stream() ).collect( Collectors.toList() );
+        return intervalList.stream()
+                .flatMap(
+                        x -> x.stream().sorted(
+                                ( a, b ) -> a.getDistance( metric ).compareTo( b.getDistance( metric ) )
+                        )
+                ).collect( Collectors.toList() );
     }
 
 }
