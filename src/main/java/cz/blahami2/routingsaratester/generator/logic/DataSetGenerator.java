@@ -20,8 +20,6 @@ import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.java8.Optional;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -37,14 +35,27 @@ public class DataSetGenerator {
     private static final int INTERVALS = 10;
     private static final int MAX_ATTEMPTS_PER_UNIT = 1000;
 
-    public <N extends Node<N, E>, E extends Edge<N, E>> List<DataSetElement<N, E>> generateDataSet( int size, Distance estimatedMaximalDistance, Metric metric, Graph<N, E> graph ) {
+    /**
+     * Generates dataset following the given criteria
+     *
+     * @param <N> node type of the graph
+     * @param <E> edge type of the graph
+     * @param size amount of data elements, not guaranteed - see attemptsPerUnit
+     * @param granularity amount of "buckets", higher the amount, more uniform the distribution
+     * @param attemptsPerUnit maximal amount of attempts per unit (size) for the algorithm to fill all the buckets, then it terminates
+     * @param estimatedMaximalDistance estimated distance of maximal route, no inputs will be higher than this value, however, fewer inputs will be found if it is too high
+     * @param metric routing metric
+     * @param graph graph to search on
+     * @return dataset
+     */
+    public <N extends Node<N, E>, E extends Edge<N, E>> List<DataSetElement<N, E>> generateDataSet( int size, int granularity, int attemptsPerUnit, Distance estimatedMaximalDistance, Metric metric, Graph<N, E> graph ) {
         RoutingAlgorithm<N, E> algorithm = new DijkstraAlgorithm<>();
         int range = (int) estimatedMaximalDistance.getValue();
-        int intervals = INTERVALS;
+        int intervals = granularity;
         int inputsPerInterval = size / intervals;
         int intervalSize = range / intervals;
         NodePairGenerator nodePairGenerator = new NodePairGenerator();
-        final int maxIterations = MAX_ATTEMPTS_PER_UNIT * size;
+        final int maxIterations = attemptsPerUnit * size;
         List<List<DataSetElement<N, E>>> intervalList = new ArrayList<>();
         for ( int i = 0; i < intervals; i++ ) {
             intervalList.add( new ArrayList<>() );

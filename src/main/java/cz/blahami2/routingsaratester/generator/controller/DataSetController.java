@@ -62,7 +62,7 @@ public class DataSetController implements Runnable {
         try {
             Graph graph = loadGraph();
             DataSetGenerator generator = new DataSetGenerator();
-            List<DataSetElement> dataSet = generator.generateDataSet( size, estimatedMaxDistance, metric, graph );
+            List<DataSetElement> dataSet = generator.generateDataSet( size, 10, 100, estimatedMaxDistance, metric, graph );
             Input.Builder builder = Input.builder();
             int elementCounter = 1;
             for ( DataSetElement dataSetElement : dataSet ) {
