@@ -7,7 +7,8 @@ nb-configuration.xml
 .idea
 routing-sra.iml
 testing_result.csv
-*.png
-*.jpg
+/*.png
+/*.jpg
+/*.txt
 
 

@@ -119,7 +119,7 @@ Default
      */
     public void run() throws IOException {
         TableBuilder<String> tableBuilder = new DoubleListTableBuilder<>();
-        tableBuilder.setHeaders( Arrays.asList( "cell size", "cell ratio", "core ratio", "low interval prob", "low interval lim", "#assembly runs", "#cells", "min cell", "max cell", "median cell", "avg cell", "#cut edges", "filtering[ms]", "assembly[ms]" ) );
+        tableBuilder.setHeaders( Arrays.asList( "cell size", "cell ratio", "core ratio", "low interval prob", "low interval lim", "#assembly runs", "#cells", "min cell", "max cell", "median cell", "avg cell", "#cut edges", "filtering[ms]", "assembly[ms]", "length[ms]", "time[ms]" ) );
         GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
         Graph graph = graphDAO.loadGraph();
         System.out.println( "Testing cell size..." );
@@ -270,10 +270,10 @@ Default
     private void generate() {
         DataSetController controller = new DataSetController(
                 new FileInputDAO(),
-                new FileDataDestination( new File( "dataset.txt" ) ),
+                new FileDataDestination( new File( "dataset_prague_time.txt" ) ),
                 1000,
-                Distance.newInstance( 40000 ),
-                Metric.LENGTH
+                Distance.newInstance( 3000 ), // 40000
+                Metric.TIME
         );
         controller.run();
     }
