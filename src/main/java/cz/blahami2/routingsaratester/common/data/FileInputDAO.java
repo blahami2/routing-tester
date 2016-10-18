@@ -3,12 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.generator.data;
+package cz.blahami2.routingsaratester.common.data;
 
-import cz.blahami2.routingsaratester.model.Input;
-import cz.blahami2.routingsaratester.model.InputElement;
+import cz.blahami2.routingsaratester.common.model.Input;
+import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.certicon.routing.data.basic.DataDestination;
 import cz.certicon.routing.data.basic.DataSource;
+import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.Time;
@@ -34,19 +35,23 @@ public class FileInputDAO implements InputDAO {
     public Input loadInput( DataSource source ) throws IOException {
         Input.Builder builder = Input.builder();
         try ( Scanner sc = new Scanner( source.getInputStream() ) ) {
+            String metricName = sc.next();
+            builder.setMetric( Metric.valueOf( metricName ) );
             while ( sc.hasNext() ) {
                 String line = sc.nextLine();
-                Scanner lsc = new Scanner( line );
-                long inputId = lsc.nextLong();
-                long sourceId = lsc.nextLong();
-                long targetId = lsc.nextLong();
-                long length = lsc.nextLong();
-                long time = lsc.nextLong();
-                List<Long> edgeIds = new ArrayList<>();
-                while ( lsc.hasNext() ) {
-                    edgeIds.add( lsc.nextLong() );
+                if ( !line.isEmpty() ) {
+                    Scanner lsc = new Scanner( line );
+                    long inputId = lsc.nextLong();
+                    long sourceId = lsc.nextLong();
+                    long targetId = lsc.nextLong();
+                    long length = lsc.nextLong();
+                    long time = lsc.nextLong();
+                    List<Long> edgeIds = new ArrayList<>();
+                    while ( lsc.hasNext() ) {
+                        edgeIds.add( lsc.nextLong() );
+                    }
+                    builder.add( new InputElement( inputId, sourceId, targetId, new Length( LengthUnits.METERS, length ), new Time( TimeUnits.SECONDS, time ), edgeIds ) );
                 }
-                builder.add( new InputElement( inputId, sourceId, targetId, new Length( LengthUnits.METERS, length ), new Time( TimeUnits.SECONDS, time ), edgeIds ) );
             }
         }
         source.close();
@@ -56,6 +61,7 @@ public class FileInputDAO implements InputDAO {
     @Override
     public void saveInput( DataDestination destination, Input input ) throws IOException {
         try ( Writer writer = new BufferedWriter( new OutputStreamWriter( destination.getOutputStream() ) ) ) {
+            writer.append( input.getMetric().name() ).append( "\n" );
             for ( InputElement inputElement : input ) {
                 writer.append( inputElement.getId() + " " )
                         .append( inputElement.getSourceNodeId() + " " )

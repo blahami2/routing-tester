@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.model;
+package cz.blahami2.routingsaratester.common.model;
 
+import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.TimeUnits;
 import gnu.trove.map.TLongObjectMap;
@@ -19,6 +20,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import lombok.Getter;
 
 /**
  *
@@ -27,9 +29,12 @@ import java.util.stream.StreamSupport;
 public class Input implements Iterable<InputElement> {
 
     private final TLongObjectMap<InputElement> map;
+    @Getter
+    private final Metric metric;
 
-    private Input( TLongObjectMap<InputElement> map ) {
+    public Input( TLongObjectMap<InputElement> map, Metric metric ) {
         this.map = map;
+        this.metric = metric;
     }
 
     public InputElement getInputElement( long inputId ) {
@@ -100,9 +105,15 @@ public class Input implements Iterable<InputElement> {
     public static class Builder {
 
         private final TLongObjectMap<InputElement> m;
+        private Metric metric = Metric.LENGTH;
 
         public Builder() {
             this.m = new TLongObjectHashMap<>();
+        }
+
+        public Builder setMetric( Metric metric ) {
+            this.metric = metric;
+            return this;
         }
 
         public Builder add( InputElement inputElement ) {
@@ -121,7 +132,7 @@ public class Input implements Iterable<InputElement> {
         }
 
         public Input build() {
-            return new Input( m );
+            return new Input( m, metric );
         }
     }
 }

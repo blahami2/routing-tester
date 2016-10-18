@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.utils;
+package cz.blahami2.routingsaratester.common.utils;
 
 import cz.certicon.routing.utils.collections.Iterator;
 import java.util.stream.Stream;

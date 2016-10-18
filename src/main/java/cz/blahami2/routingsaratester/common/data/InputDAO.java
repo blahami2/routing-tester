@@ -3,9 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.generator.data;
+package cz.blahami2.routingsaratester.common.data;
 
-import cz.blahami2.routingsaratester.model.Input;
+import cz.blahami2.routingsaratester.common.model.Input;
 import cz.certicon.routing.data.basic.DataDestination;
 import cz.certicon.routing.data.basic.DataSource;
 import java.io.IOException;

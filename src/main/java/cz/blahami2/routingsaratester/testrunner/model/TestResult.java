@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.model;
+package cz.blahami2.routingsaratester.testrunner.model;
 
 import cz.certicon.routing.model.values.Time;
 import lombok.Builder;
@@ -23,6 +23,8 @@ public class TestResult {
     int maximalCellSize;
     int minimalCellSize;
     int numberOfCutEdges;
+    double validRatio;
     Time filteringTime;
     Time assemblyTime;
+    Time routingTime;
 }

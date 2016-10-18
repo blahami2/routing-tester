@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.model;
+package cz.blahami2.routingsaratester.plot.model;
 
 import cz.blahami2.utils.table.model.Table;
 import cz.certicon.routing.utils.ColorUtils;

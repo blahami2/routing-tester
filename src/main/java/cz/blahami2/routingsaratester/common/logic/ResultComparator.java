@@ -3,9 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.logic;
+package cz.blahami2.routingsaratester.common.logic;
 
-import cz.blahami2.routingsaratester.model.Output;
+import cz.blahami2.routingsaratester.common.model.Output;
 
 /**
  *

@@ -5,6 +5,7 @@
  */
 package cz.blahami2.routingsaratester.model;
 
+import cz.blahami2.routingsaratester.plot.model.GralPlot;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
 import cz.blahami2.utils.table.model.Table;
 import cz.blahami2.utils.table.model.TableBuilder;

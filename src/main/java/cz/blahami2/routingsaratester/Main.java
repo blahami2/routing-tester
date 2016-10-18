@@ -6,12 +6,12 @@
 package cz.blahami2.routingsaratester;
 
 import cz.blahami2.routingsaratester.generator.controller.DataSetController;
-import cz.blahami2.routingsaratester.generator.data.FileInputDAO;
+import cz.blahami2.routingsaratester.common.data.FileInputDAO;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
-import cz.blahami2.routingsaratester.logic.TestRunner;
-import cz.blahami2.routingsaratester.model.GralPlot;
-import cz.blahami2.routingsaratester.model.TestOptions;
-import cz.blahami2.routingsaratester.model.TestResult;
+import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
+import cz.blahami2.routingsaratester.plot.model.GralPlot;
+import cz.blahami2.routingsaratester.testrunner.model.TestOptions;
+import cz.blahami2.routingsaratester.testrunner.model.TestResult;
 import cz.blahami2.utils.table.data.CsvTableExporter;
 import cz.blahami2.utils.table.data.TableExporter;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
@@ -271,7 +271,7 @@ Default
         DataSetController controller = new DataSetController(
                 new FileInputDAO(),
                 new FileDataDestination( new File( "dataset.txt" ) ),
-                100,
+                1000,
                 Distance.newInstance( 40000 ),
                 Metric.LENGTH
         );

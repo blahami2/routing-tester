@@ -5,7 +5,7 @@
  */
 package cz.blahami2.routingsaratester.generator.logic;
 
-import cz.blahami2.routingsaratester.utils.Iterators;
+import cz.blahami2.routingsaratester.common.utils.Iterators;
 import cz.certicon.routing.model.basic.Pair;
 import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;

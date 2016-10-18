@@ -5,11 +5,11 @@
  */
 package cz.blahami2.routingsaratester.generator.controller;
 
-import cz.blahami2.routingsaratester.generator.data.InputDAO;
+import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.generator.logic.DataSetGenerator;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
-import cz.blahami2.routingsaratester.model.Input;
-import cz.blahami2.routingsaratester.model.InputElement;
+import cz.blahami2.routingsaratester.common.model.Input;
+import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.certicon.routing.algorithm.DijkstraAlgorithm;
 import cz.certicon.routing.algorithm.RoutingAlgorithm;
 import cz.certicon.routing.data.GraphDAO;
