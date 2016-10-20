@@ -5,6 +5,7 @@
  */
 package cz.blahami2.routingsaratester.generator.logic;
 
+import cz.blahami2.routingsaratester.common.model.Counter;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.certicon.routing.algorithm.DijkstraAlgorithm;
 import cz.certicon.routing.algorithm.RoutingAlgorithm;
@@ -16,11 +17,7 @@ import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.graph.Node;
 import cz.certicon.routing.model.values.Coordinate;
 import cz.certicon.routing.model.values.Distance;
-import cz.certicon.routing.model.values.Time;
-import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.RandomUtils;
-import cz.certicon.routing.utils.java8.Optional;
-import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -29,6 +26,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java8.util.Optional;
 
 /**
  *
@@ -129,13 +127,13 @@ public class DataSetGenerator {
             Set<Integer> unfinished1 = IntStream.range( 0, intervals ).boxed().collect( Collectors.toSet() );
             for ( int j = 0; j < intervals; j++ ) {
                 if ( unfinished1.contains( j ) ) {
-                    int direction = 0;
+                    Counter direction = new Counter( 0, intervals - j - 1 );
                     for ( int k = 0; k < maxIterations && unfinished1.contains( j ); k++ ) {
                         int intervalIdx = j;
                         int minLength = intervalSize * j;
                         int maxLength = intervalSize * ( j + 1 );
                         int nodeIntervalSize = ( numberOfNodes * numberOfNodes ) / intervals;
-                        int idx = nodeIntervalSize * ( j + direction ) + rand.nextInt( nodeIntervalSize );
+                        int idx = nodeIntervalSize * ( j + direction.getValue() ) + rand.nextInt( nodeIntervalSize );
                         Pair<N, N> pair = pairs.get( idx );
                         Optional<Route<N, E>> optionalRoute = algorithm.route( graph, metric, pair.a, pair.b );
                         if ( optionalRoute.isPresent() ) {
@@ -143,9 +141,9 @@ public class DataSetGenerator {
                             Distance distance = route.calculateDistance( metric );
                             int length = (int) distance.getValue();
                             if ( length < minLength ) {
-                                direction++;
+                                direction.increment();
                             } else if ( length > maxLength ) {
-                                direction--;
+                                direction.decrement();
                             } else {
                                 List<DataSetElement<N, E>> targetInterval = intervalList.get( intervalIdx );
                                 targetInterval.add( new DataSetElement<>( pair.a, pair.b, route ) );
@@ -153,8 +151,6 @@ public class DataSetGenerator {
                                 System.out.println( "added to bucket[" + intervalIdx + "] => " + targetInterval.size() );
                             }
                         }
-                        direction = direction < 0 ? 0 : direction;
-                        direction = direction > intervals - j - 1 ? intervals - j - 1 : direction;
                     }
                 }
             }

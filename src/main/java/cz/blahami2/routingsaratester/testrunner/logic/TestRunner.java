@@ -5,6 +5,7 @@
  */
 package cz.blahami2.routingsaratester.testrunner.logic;
 
+import cz.blahami2.routingsaratester.common.model.Counter;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.blahami2.routingsaratester.testrunner.model.TestResult;
@@ -22,7 +23,6 @@ import cz.certicon.routing.model.graph.SaraNode;
 import cz.certicon.routing.model.values.Time;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DisplayUtils;
-import cz.certicon.routing.utils.java8.Optional;
 import cz.certicon.routing.utils.measuring.TimeLogger;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import cz.certicon.routing.utils.progress.SimpleProgressListener;
@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import java8.util.Optional;
 import lombok.NonNull;
 
 /**
@@ -167,20 +168,4 @@ public class TestRunner implements Runnable {
         return true;
     }
 
-    private static class Counter {
-
-        private int value = 0;
-
-        public int increment() {
-            return ++value;
-        }
-
-        public int decrement() {
-            return --value;
-        }
-
-        public int getValue() {
-            return value;
-        }
-    }
 }

@@ -12,6 +12,7 @@ import cz.certicon.routing.data.basic.DataDestination;
 import cz.certicon.routing.data.basic.DataSource;
 import cz.certicon.routing.data.basic.FileDataDestination;
 import cz.certicon.routing.data.basic.FileDataSource;
+import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.Time;
@@ -53,12 +54,14 @@ public class FileInputDAOTest {
 
     @Before
     public void setUp() {
+        Metric metric = Metric.LENGTH;
         testFile = new File( "FileInputDAOTest.test" );
         System.out.println( "creating file: " + testFile.getAbsolutePath() );
-        stringRepresentation = "1 2 3 4 5 6 7 8 9\n11 12 13 14 15 16 17 18 19\n";
+        stringRepresentation = metric.name() + " 1 2 3 4 5 6 7 8 9\n11 12 13 14 15 16 17 18 19\n";
         Input.Builder builder = Input.builder();
         builder.add( new InputElement( 1, 2, 3, new Length( LengthUnits.METERS, 4 ), new Time( TimeUnits.SECONDS, 5 ), Arrays.asList( 6L, 7L, 8L, 9L ) ) );
         builder.add( new InputElement( 11, 12, 13, new Length( LengthUnits.METERS, 14 ), new Time( TimeUnits.SECONDS, 15 ), Arrays.asList( 16L, 17L, 18L, 19L ) ) );
+        builder.setMetric( metric );
         testInput = builder.build();
     }
 
