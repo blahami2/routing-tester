@@ -26,7 +26,6 @@ import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.Time;
 import cz.certicon.routing.model.values.TimeUnits;
-import cz.certicon.routing.utils.java8.Optional;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;

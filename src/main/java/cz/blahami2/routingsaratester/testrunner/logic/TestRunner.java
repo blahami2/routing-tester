@@ -14,7 +14,7 @@ import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
 import cz.certicon.routing.model.Route;
-import cz.certicon.routing.model.basic.MaxIdContainer;
+import cz.certicon.routing.model.basic.IdSupplier;
 import cz.certicon.routing.model.graph.Cell;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.SaraEdge;
@@ -88,7 +88,7 @@ public class TestRunner implements Runnable {
         testRunnerTime.start();
         Preprocessor preprocessor = new BottomUpPreprocessor();
         System.out.println( "Preprocessing..." );
-        SaraGraph bestResultGraph = preprocessor.preprocess( graph, input, new MaxIdContainer( 0 ), new SimpleProgressListener( 10 ) {
+        SaraGraph bestResultGraph = preprocessor.preprocess( graph, input, new IdSupplier( 0 ), new SimpleProgressListener( 10 ) {
             @Override
             public void onProgressUpdate( double d ) {
                 System.out.printf( "- progress: %.02f %%\n", d );

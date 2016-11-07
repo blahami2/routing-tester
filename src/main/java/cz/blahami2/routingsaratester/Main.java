@@ -7,6 +7,9 @@ package cz.blahami2.routingsaratester;
 
 import cz.blahami2.routingsaratester.generator.controller.DataSetController;
 import cz.blahami2.routingsaratester.common.data.FileInputDAO;
+import cz.blahami2.routingsaratester.common.data.InputDAO;
+import cz.blahami2.routingsaratester.common.model.Input;
+import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
 import cz.blahami2.routingsaratester.plot.model.GralPlot;
@@ -17,6 +20,11 @@ import cz.blahami2.utils.table.data.TableExporter;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
 import cz.blahami2.utils.table.model.Table;
 import cz.blahami2.utils.table.model.TableBuilder;
+import cz.certicon.routing.algorithm.DijkstraAlgorithm;
+import cz.certicon.routing.algorithm.RoutingAlgorithm;
+import cz.certicon.routing.algorithm.sara.optimized.MultilevelDijkstra;
+import cz.certicon.routing.algorithm.sara.optimized.data.OptimizedGraphDAO;
+import cz.certicon.routing.algorithm.sara.optimized.model.OptimizedGraph;
 import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
@@ -30,9 +38,12 @@ import cz.certicon.routing.data.GraphDeleteMessenger;
 import cz.certicon.routing.data.SqliteGraphDAO;
 import cz.certicon.routing.data.SqliteGraphDataDAO;
 import cz.certicon.routing.data.SqliteGraphDataUpdater;
+import cz.certicon.routing.data.basic.DataDestination;
+import cz.certicon.routing.data.basic.DataSource;
 import cz.certicon.routing.data.basic.FileDataDestination;
+import cz.certicon.routing.data.basic.FileDataSource;
 import cz.certicon.routing.data.processor.GraphComponentSearcher;
-import cz.certicon.routing.model.basic.MaxIdContainer;
+import cz.certicon.routing.model.basic.IdSupplier;
 import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.Metric;
@@ -58,6 +69,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 import javax.swing.JFrame;
 
@@ -80,12 +92,13 @@ public class Main {
 //        main.reduce();
 //        main.testPlot();
 //        main.testVisualiser();
-        main.generate();
+//        main.generate();
+        main.compareDijkstras();
     }
 
     private List<String> toList( PreprocessingInput options, TestResult result ) {
         List<String> list = new ArrayList<>();
-        list.add( Integer.toString( options.getCellSize() ) );
+        list.add( Arrays.toString( options.getCellSizes() ) );
         list.add( Double.toString( options.getCellRatio() ) );
         list.add( Double.toString( options.getCoreRatio() ) );
         list.add( Double.toString( options.getLowIntervalProbability() ) );
@@ -152,7 +165,7 @@ Default
 //        System.out.println( "Filtering..." );
         Preprocessor preprocessor = new BottomUpPreprocessor();
         System.out.println( "Preprocessing..." );
-        SaraGraph saraGraph = preprocessor.preprocess( graph, input, new MaxIdContainer( 0 ), new SimpleProgressListener( 10 ) {
+        SaraGraph saraGraph = preprocessor.preprocess( graph, input, new IdSupplier( 0 ), new SimpleProgressListener( 10 ) {
             @Override
             public void onProgressUpdate( double d ) {
                 System.out.printf( "Done: %d %%\n", (int) ( d * 100 ) );
@@ -275,6 +288,50 @@ Default
                 Distance.newInstance( 3000 ), // 40000
                 Metric.TIME
         );
+        controller.run();
+    }
+
+    private void compareDijkstras() throws IOException {
+        InputDAO inputDAO = new FileInputDAO();
+        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_prague_length.txt" ) ) );
+        ComparatorController controller = new ComparatorController( loadProperties(), input,
+                new ComparatorController.Runner() {
+
+            Graph graph;
+
+            @Override
+            public void prepare( Properties connectionProperties ) throws IOException {
+                GraphDAO dao = new SqliteGraphDAO( connectionProperties );
+                graph = dao.loadGraph();
+            }
+
+            @Override
+            public boolean run( Input input ) {
+                final RoutingAlgorithm alg = new DijkstraAlgorithm();
+                input.stream().forEach( x -> {
+                    alg.route( graph, Metric.LENGTH, graph.getNodeById( x.getSourceNodeId() ), graph.getNodeById( x.getTargetNodeId() ) );
+                } );
+                return true;
+            }
+        },
+                new ComparatorController.Runner() {
+            OptimizedGraph graph;
+
+            @Override
+            public void prepare( Properties connectionProperties ) throws IOException {
+                OptimizedGraphDAO dao = new OptimizedGraphDAO( connectionProperties );
+                graph = dao.loadGraph();
+            }
+
+            @Override
+            public boolean run( Input input ) {
+                final MultilevelDijkstra alg = new MultilevelDijkstra();
+                input.stream().forEach( x -> {
+                    alg.route( graph, x.getSourceNodeId(), x.getTargetNodeId(), Metric.LENGTH );
+                } );
+                return true;
+            }
+        } );
         controller.run();
     }
 
