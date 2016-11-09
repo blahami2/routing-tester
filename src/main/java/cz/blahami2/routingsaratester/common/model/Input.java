@@ -56,6 +56,10 @@ public class Input implements Iterable<InputElement> {
         return StreamSupport.stream( spliterator(), parallel );
     }
 
+    public int size() {
+        return map.size();
+    }
+
     @Override
     public String toString() {
         return "{"

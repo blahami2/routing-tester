@@ -9,6 +9,7 @@ import cz.blahami2.routingsaratester.generator.controller.DataSetController;
 import cz.blahami2.routingsaratester.common.data.FileInputDAO;
 import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.common.model.Input;
+import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
@@ -25,6 +26,7 @@ import cz.certicon.routing.algorithm.RoutingAlgorithm;
 import cz.certicon.routing.algorithm.sara.optimized.MultilevelDijkstra;
 import cz.certicon.routing.algorithm.sara.optimized.data.OptimizedGraphDAO;
 import cz.certicon.routing.algorithm.sara.optimized.model.OptimizedGraph;
+import cz.certicon.routing.algorithm.sara.optimized.model.Route;
 import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
@@ -32,6 +34,10 @@ import cz.certicon.routing.algorithm.sara.preprocessing.assembly.Assembler;
 import cz.certicon.routing.algorithm.sara.preprocessing.assembly.GreedyAssembler;
 import cz.certicon.routing.algorithm.sara.preprocessing.filtering.Filter;
 import cz.certicon.routing.algorithm.sara.preprocessing.filtering.NaturalCutsFilter;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilder;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayCreator;
+import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
+import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
 import cz.certicon.routing.data.GraphDAO;
 import cz.certicon.routing.data.GraphDataUpdater;
 import cz.certicon.routing.data.GraphDeleteMessenger;
@@ -48,7 +54,9 @@ import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.graph.Node;
+import cz.certicon.routing.model.graph.SaraEdge;
 import cz.certicon.routing.model.graph.SaraGraph;
+import cz.certicon.routing.model.graph.SaraNode;
 import cz.certicon.routing.model.graph.preprocessing.ContractGraph;
 import cz.certicon.routing.model.values.Distance;
 import cz.certicon.routing.model.values.TimeUnits;
@@ -69,8 +77,10 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
+import java8.util.Optional;
 import javax.swing.JFrame;
 
 /**
@@ -158,8 +168,8 @@ Default
                 .withCoreRatio( 0.1 )
                 .withLowIntervalProbability( 0.03 )
                 .withLowIntervalLimit( 0.6 )
-                .withNumberOfAssemblyRuns( 100 )
-                .withNumberOfLayers( 5 );
+                .withNumberOfAssemblyRuns( 1 ) // 100
+                .withNumberOfLayers( 1 ); // 5
         Graph graph = graphDAO.loadGraph();
         TestResult.TestResultBuilder builder = TestResult.builder();
 //        System.out.println( "Filtering..." );
@@ -294,45 +304,128 @@ Default
     private void compareDijkstras() throws IOException {
         InputDAO inputDAO = new FileInputDAO();
         Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_prague_length.txt" ) ) );
-        ComparatorController controller = new ComparatorController( loadProperties(), input,
-                new ComparatorController.Runner() {
-
-            Graph graph;
-
-            @Override
-            public void prepare( Properties connectionProperties ) throws IOException {
-                GraphDAO dao = new SqliteGraphDAO( connectionProperties );
-                graph = dao.loadGraph();
-            }
-
-            @Override
-            public boolean run( Input input ) {
-                final RoutingAlgorithm alg = new DijkstraAlgorithm();
-                input.stream().forEach( x -> {
-                    alg.route( graph, Metric.LENGTH, graph.getNodeById( x.getSourceNodeId() ), graph.getNodeById( x.getTargetNodeId() ) );
-                } );
-                return true;
-            }
-        },
-                new ComparatorController.Runner() {
-            OptimizedGraph graph;
-
-            @Override
-            public void prepare( Properties connectionProperties ) throws IOException {
-                OptimizedGraphDAO dao = new OptimizedGraphDAO( connectionProperties );
-                graph = dao.loadGraph();
-            }
-
-            @Override
-            public boolean run( Input input ) {
-                final MultilevelDijkstra alg = new MultilevelDijkstra();
-                input.stream().forEach( x -> {
-                    alg.route( graph, x.getSourceNodeId(), x.getTargetNodeId(), Metric.LENGTH );
-                } );
-                return true;
-            }
-        } );
+        ComparatorController controller = new ComparatorController( loadProperties(), input, new SaraRunner(), new SaraRunner() );
         controller.run();
+    }
+
+    private static class ObjRunner implements ComparatorController.Runner {
+
+        Graph graph;
+
+        @Override
+        public void prepare( Properties connectionProperties ) throws IOException {
+            GraphDAO dao = new SqliteGraphDAO( connectionProperties );
+            graph = dao.loadGraph();
+        }
+
+        @Override
+        public boolean run( Input input ) {
+            final RoutingAlgorithm alg = new DijkstraAlgorithm();
+            return input.stream().map( new Function<InputElement, Boolean>() {
+                @Override
+                public Boolean apply( InputElement x ) {
+                    Optional<cz.certicon.routing.model.Route> route = alg.route( graph, Metric.LENGTH, graph.getNodeById( x.getSourceNodeId() ), graph.getNodeById( x.getTargetNodeId() ) );
+                    java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
+                    if ( !route.isPresent() ) {
+                        return false;
+                    }
+                    return route.get().getEdgeList().stream()
+                            .mapToLong( e -> ( (Edge) e ).getId() )
+                            .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
+                }
+            } ).allMatch( x -> x );
+        }
+    }
+
+    private static class OptRunner implements ComparatorController.Runner {
+
+        OptimizedGraph graph;
+
+        @Override
+        public void prepare( Properties connectionProperties ) throws IOException {
+            OptimizedGraphDAO dao = new OptimizedGraphDAO( connectionProperties );
+            graph = dao.loadGraph();
+        }
+
+        @Override
+        public boolean run( Input input ) {
+            final MultilevelDijkstra alg = new MultilevelDijkstra();
+            return input.stream().map( ( InputElement x ) -> {
+                Optional<Route> route = alg.route( graph, x.getSourceNodeId(), x.getTargetNodeId(), Metric.LENGTH );
+                java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
+                if ( !route.isPresent() ) {
+                    return false;
+                }
+                return Arrays.stream( route.get().getEdges() )
+                        .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
+            } ).allMatch( x -> x );
+        }
+    }
+
+    private static class SaraRunner implements ComparatorController.Runner {
+
+        SaraGraph graph;
+        OverlayBuilder overlay;
+
+        @Override
+        public void prepare( Properties connectionProperties ) throws IOException {
+            OverlayCreator creator = new OverlayCreator();
+            OverlayCreator.SaraSetup setup = creator.getSetup();
+
+            setup.setSpatialModulePath( connectionProperties.getProperty( "spatialite_path" ) );
+            String dbUrl = connectionProperties.getProperty( "url" ).substring( "jdbc:sqlite:".length() );
+            dbUrl = dbUrl.substring( 0, dbUrl.length() - ".sqlite".length() );
+            int lastSlashIdx = dbUrl.lastIndexOf( "/" );
+            String dbFolder = dbUrl.substring( 0, lastSlashIdx + 1 );
+            String dbName = dbUrl.substring( lastSlashIdx + 1 );
+            setup.setDbFolder( dbFolder );
+            setup.setRandomSeed( 123 );
+            setup.setLayerCount( 5 );
+            setup.setMaxCellSize( 20 );
+            setup.setNumberOfAssemblyRuns( 1 );
+
+            // D://prog-20-5.sqlite
+            setup.setDbName( dbName );
+
+            // punch and save
+            //setup.runPunch = true;
+            //no punch, load only
+            setup.setRunPunch( true );
+
+            overlay = creator.createBuilder();
+            overlay.buildOverlays();
+
+            graph = overlay.getGraph();
+        }
+
+        @Override
+        public boolean run( Input input ) {
+            MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm();
+            MLDRecursiveRouteUnpacker unpacker = new MLDRecursiveRouteUnpacker();
+            IdSupplier counter = new IdSupplier( 0 );
+            return input.stream().map( ( InputElement x ) -> {
+                SaraNode source = graph.getNodeById( x.getSourceNodeId() );
+                SaraNode target = graph.getNodeById( x.getTargetNodeId() );
+                Optional<cz.certicon.routing.model.Route> route = alg.route( graph, overlay, Metric.LENGTH, source, target, unpacker );
+                java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
+                if ( !route.isPresent() ) {
+                    System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );
+                    System.out.print( " (" + ( source.getId() ) + " -> " + ( target.getId() ) + ")" );
+                    System.out.println( ", not found " + counter.next() + "/" + input.size() );
+                    return true;
+                }
+                boolean result = route.get().getEdgeList().stream()
+                        .mapToLong( e -> ( (Edge) e ).getId() )
+                        .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
+                if ( !result ) {
+                    System.out.println( "Routes do not match for id: " + x.getId() );
+                    System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
+                    System.out.println( "Route res: length = " + route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + route.get().calculateDistance( Metric.TIME ).getValue() + ", edges = " + route.get().getEdgeList().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
+                }
+                return result;
+            } ).allMatch( x -> x );
+        }
+
     }
 
 }
