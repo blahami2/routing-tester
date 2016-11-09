@@ -420,7 +420,7 @@ Default
                 if ( !result ) {
                     System.out.println( "Routes do not match for id: " + x.getId() );
                     System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
-                    System.out.println( "Route res: length = " + route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + route.get().calculateDistance( Metric.TIME ).getValue() + ", edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
+                    System.out.println( "Route res: length = " + (int) route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + (int) route.get().calculateDistance( Metric.TIME ).getValue() + " s, edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
                 }
                 return result;
             } ).allMatch( x -> x );
