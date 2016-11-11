@@ -135,7 +135,7 @@ public class DataSetGenerator {
                         int nodeIntervalSize = ( numberOfNodes * numberOfNodes ) / intervals;
                         int idx = nodeIntervalSize * ( j + direction.getValue() ) + rand.nextInt( nodeIntervalSize );
                         Pair<N, N> pair = pairs.get( idx );
-                        Optional<Route<N, E>> optionalRoute = algorithm.route( graph, metric, pair.a, pair.b );
+                        Optional<Route<N, E>> optionalRoute = algorithm.route( metric, pair.a, pair.b );
                         if ( optionalRoute.isPresent() ) {
                             Route<N, E> route = optionalRoute.get();
                             Distance distance = route.calculateDistance( metric );

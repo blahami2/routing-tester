@@ -304,7 +304,7 @@ Default
     private void compareDijkstras() throws IOException {
         InputDAO inputDAO = new FileInputDAO();
         Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_prague_length.txt" ) ) );
-        ComparatorController controller = new ComparatorController( loadProperties(), input, new SaraRunner(), new SaraRunner() );
+        ComparatorController controller = new ComparatorController( loadProperties(), input, new OptRunner(), new OptRunner() );
         controller.run();
     }
 
@@ -324,7 +324,7 @@ Default
             return input.stream().map( new Function<InputElement, Boolean>() {
                 @Override
                 public Boolean apply( InputElement x ) {
-                    Optional<cz.certicon.routing.model.Route> route = alg.route( graph, Metric.LENGTH, graph.getNodeById( x.getSourceNodeId() ), graph.getNodeById( x.getTargetNodeId() ) );
+                    Optional<cz.certicon.routing.model.Route> route = alg.route( Metric.LENGTH, graph.getNodeById( x.getSourceNodeId() ), graph.getNodeById( x.getTargetNodeId() ) );
                     java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
                     if ( !route.isPresent() ) {
                         return false;
@@ -350,14 +350,24 @@ Default
         @Override
         public boolean run( Input input ) {
             final MultilevelDijkstra alg = new MultilevelDijkstra();
+            IdSupplier counter = new IdSupplier( 0 );
             return input.stream().map( ( InputElement x ) -> {
                 Optional<Route> route = alg.route( graph, x.getSourceNodeId(), x.getTargetNodeId(), Metric.LENGTH );
                 java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
                 if ( !route.isPresent() ) {
-                    return false;
+                    System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );
+                    System.out.print( " (" + x.getSourceNodeId() + " -> " + x.getTargetNodeId() + ")" );
+                    System.out.println( ", not found " + counter.next() + "/" + input.size() );
+                    return true;
                 }
-                return Arrays.stream( route.get().getEdges() )
+                boolean result = Arrays.stream( route.get().getEdges() )
                         .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
+                if ( !result ) {
+                    System.out.println( "Routes do not match for id: " + x.getId() );
+                    System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
+                    System.out.println( "Route res: length = " + (int) route.get().calculateDistance( graph, Metric.LENGTH ) + ", time = " + (int) route.get().calculateDistance( graph, Metric.TIME ) + " s, edges = " + Arrays.stream( route.get().getEdges() ).mapToObj( Long::toString ).collect( Collectors.joining( " " ) ) );
+                }
+                return result;
             } ).allMatch( x -> x );
         }
     }
@@ -406,7 +416,7 @@ Default
             return input.stream().map( ( InputElement x ) -> {
                 SaraNode source = graph.getNodeById( x.getSourceNodeId() );
                 SaraNode target = graph.getNodeById( x.getTargetNodeId() );
-                Optional<cz.certicon.routing.model.Route> route = alg.route( graph, overlay, Metric.LENGTH, source, target, unpacker );
+                Optional<cz.certicon.routing.model.Route> route = alg.route( overlay, Metric.LENGTH, source, target, unpacker );
                 java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
                 if ( !route.isPresent() ) {
                     System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );

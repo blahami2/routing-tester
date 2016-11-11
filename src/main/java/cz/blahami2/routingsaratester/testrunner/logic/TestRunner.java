@@ -124,7 +124,7 @@ public class TestRunner implements Runnable {
                     SaraNode sourceNode = bestResultGraph.getNodeById( x.getSourceNodeId() );
                     SaraNode targetNode = bestResultGraph.getNodeById( x.getTargetNodeId() );
                     routingTimeMeasurement.continue_();
-                    Optional<Route<SaraNode, SaraEdge>> optionalRoute = routingAlgorithm.route( bestResultGraph, ti.getMetric(), sourceNode, targetNode );
+                    Optional<Route<SaraNode, SaraEdge>> optionalRoute = routingAlgorithm.route( ti.getMetric(), sourceNode, targetNode );
                     routingTimeMeasurement.pause();
                     if ( optionalRoute.isPresent() ) {
                         Route<SaraNode, SaraEdge> route = optionalRoute.get();
