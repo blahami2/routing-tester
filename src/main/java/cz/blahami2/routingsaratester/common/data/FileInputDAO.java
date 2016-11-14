@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 /**
  *
- * @author Michael Blaha {@literal <michael.blaha@gmail.com>}
+ * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 public class FileInputDAO implements InputDAO {
 

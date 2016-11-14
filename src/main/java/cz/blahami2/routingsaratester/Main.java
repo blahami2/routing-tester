@@ -9,43 +9,26 @@ import cz.blahami2.routingsaratester.generator.controller.DataSetController;
 import cz.blahami2.routingsaratester.common.data.FileInputDAO;
 import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.common.model.Input;
-import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
-import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
 import cz.blahami2.routingsaratester.plot.model.GralPlot;
-import cz.blahami2.routingsaratester.testrunner.model.TestOptions;
+import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedDijkstraRunner;
+import cz.blahami2.routingsaratester.testrunner.logic.runners.PrimitiveBasedDijkstraRunner;
 import cz.blahami2.routingsaratester.testrunner.model.TestResult;
 import cz.blahami2.utils.table.data.CsvTableExporter;
 import cz.blahami2.utils.table.data.TableExporter;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
 import cz.blahami2.utils.table.model.Table;
 import cz.blahami2.utils.table.model.TableBuilder;
-import cz.certicon.routing.algorithm.DijkstraAlgorithm;
-import cz.certicon.routing.algorithm.RoutingAlgorithm;
-import cz.certicon.routing.algorithm.sara.optimized.MultilevelDijkstra;
-import cz.certicon.routing.algorithm.sara.optimized.data.OptimizedGraphDAO;
-import cz.certicon.routing.algorithm.sara.optimized.model.OptimizedGraph;
-import cz.certicon.routing.algorithm.sara.optimized.model.Route;
 import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
-import cz.certicon.routing.algorithm.sara.preprocessing.assembly.Assembler;
-import cz.certicon.routing.algorithm.sara.preprocessing.assembly.GreedyAssembler;
-import cz.certicon.routing.algorithm.sara.preprocessing.filtering.Filter;
-import cz.certicon.routing.algorithm.sara.preprocessing.filtering.NaturalCutsFilter;
-import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilder;
-import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayCreator;
-import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
-import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
 import cz.certicon.routing.data.GraphDAO;
 import cz.certicon.routing.data.GraphDataUpdater;
 import cz.certicon.routing.data.GraphDeleteMessenger;
 import cz.certicon.routing.data.SqliteGraphDAO;
 import cz.certicon.routing.data.SqliteGraphDataDAO;
 import cz.certicon.routing.data.SqliteGraphDataUpdater;
-import cz.certicon.routing.data.basic.DataDestination;
-import cz.certicon.routing.data.basic.DataSource;
 import cz.certicon.routing.data.basic.FileDataDestination;
 import cz.certicon.routing.data.basic.FileDataSource;
 import cz.certicon.routing.data.processor.GraphComponentSearcher;
@@ -54,10 +37,7 @@ import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.graph.Node;
-import cz.certicon.routing.model.graph.SaraEdge;
 import cz.certicon.routing.model.graph.SaraGraph;
-import cz.certicon.routing.model.graph.SaraNode;
-import cz.certicon.routing.model.graph.preprocessing.ContractGraph;
 import cz.certicon.routing.model.values.Distance;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DisplayUtils;
@@ -75,21 +55,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.StreamSupport;
-import java8.util.Optional;
 import javax.swing.JFrame;
 
 /**
  *
- * @author Michael Blaha {@literal <michael.blaha@gmail.com>}
+ * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 public class Main {
 
-    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 10000, 1, 0.1, 0.03, 0.6, 200, 3 );
+    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 10000, 1, 0.1, 0.03, 0.6, 200, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3 
 
     /**
      * @param args the command line arguments
@@ -97,13 +72,13 @@ public class Main {
      */
     public static void main( String[] args ) throws IOException {
         Main main = new Main();
-//        main.run();
+        main.run();
 //        main.test();
 //        main.reduce();
 //        main.testPlot();
 //        main.testVisualiser();
 //        main.generate();
-        main.compareDijkstras();
+//        main.compareDijkstras();
     }
 
     private List<String> toList( PreprocessingInput options, TestResult result ) {
@@ -140,24 +115,47 @@ Default
     Low interval <0,?>: 0.6
     Number of assembly runs: 1000
      */
+    /**
+     * Run parameter testing. Below is an example with cell size testing.
+     *
+     * @throws IOException exception
+     */
     public void run() throws IOException {
         TableBuilder<String> tableBuilder = new DoubleListTableBuilder<>();
         tableBuilder.setHeaders( Arrays.asList( "cell size", "cell ratio", "core ratio", "low interval prob", "low interval lim", "#assembly runs", "#cells", "min cell", "max cell", "median cell", "avg cell", "#cut edges", "filtering[ms]", "assembly[ms]", "length[ms]", "time[ms]" ) );
         GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
         Graph graph = graphDAO.loadGraph();
+
+        TableBuilder<Double> builder = new DoubleListTableBuilder<>();
+        builder.setHeader( 0, "Cell size" ); // set x label
+        builder.setHeader( 1, "#cut edges" ); // set y dataset #1 label
+        int rowCounter = 0;
+
         System.out.println( "Testing cell size..." );
-        for ( int cellSize = 100; cellSize < 10000; cellSize *= 2 ) {
+        for ( int cellSize = 10; cellSize < 1000; cellSize *= 2 ) {
             PreprocessingInput options = DEFAULT_OPTIONS.withCellSize( cellSize );
             TestRunner runner = new TestRunner( graph, options );
             TestResult result = runner.runForResult();
             tableBuilder.addRow( toList( options, result ) );
+
+            builder.setCell( rowCounter, 0, (double) cellSize ); // set x cellSize
+            builder.setCell( rowCounter, 1, (double) result.getNumberOfCutEdges() ); // set number of cut edges for the given cell size
+            rowCounter++;
         }
         Table<String> table = tableBuilder.build();
         TableExporter exporter = new CsvTableExporter( CsvTableExporter.Delimiter.SEMICOLON );
         exporter.export( new File( "testing_result.csv" ), table, str -> str );
 
+        // Create plot
+        GralPlot plot = new GralPlot( builder.build(), Function.identity() ); // create new instance with the table and a mapper from Double to Double (see TableBuilder declaration)
+        plot.export( new File( "graph.png" ) ); // export image into graph.png
     }
 
+    /**
+     * Test single preprocessing run with result presentation on the map
+     *
+     * @throws IOException exception
+     */
     public void test() throws IOException {
         GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
 //        PreprocessingInput input = DEFAULT_OPTIONS.withCellSize( 100 ).withNumberOfAssemblyRuns( 100 ).withNumberOfLayers( 1 );
@@ -198,6 +196,13 @@ Default
         DisplayUtils.display( saraGraph );
     }
 
+    /**
+     * Removes all but the largest component. Watch out, there might be some
+     * paths inside this region which are connected to the overall graph in the
+     * other region, this method would remove them as well.
+     *
+     * @throws IOException exception
+     */
     public void reduce() throws IOException {
         Properties properties = loadProperties();
         GraphDAO graphDAO = new SqliteGraphDAO( properties );
@@ -220,6 +225,11 @@ Default
         return properties;
     }
 
+    /**
+     * Test plot generating
+     *
+     * @throws IOException exception
+     */
     public void testPlot() throws IOException {
 
         TableBuilder<String> builder = new DoubleListTableBuilder<>();
@@ -260,6 +270,11 @@ Default
 //        frame.setVisible( true );
     }
 
+    /**
+     * Test graph presentation
+     *
+     * @throws IOException exception
+     */
     public void testVisualiser() throws IOException {
         Properties properties = loadProperties();
         GraphDAO graphDAO = new SqliteGraphDAO( properties );
@@ -290,6 +305,9 @@ Default
         }
     }
 
+    /**
+     * Generates dataset of given size
+     */
     private void generate() {
         DataSetController controller = new DataSetController(
                 new FileInputDAO(),
@@ -301,141 +319,18 @@ Default
         controller.run();
     }
 
+    /**
+     * Compares two implementation of Dijkstra (in terms of speed). Validates
+     * both via provided dataset. See ComparatorController.Runner
+     * implementations below.
+     *
+     * @throws IOException exception
+     */
     private void compareDijkstras() throws IOException {
         InputDAO inputDAO = new FileInputDAO();
         Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_prague_length.txt" ) ) );
-        ComparatorController controller = new ComparatorController( loadProperties(), input, new OptRunner(), new OptRunner() );
+        ComparatorController controller = new ComparatorController( loadProperties(), input, new ObjectBasedDijkstraRunner(), new PrimitiveBasedDijkstraRunner() );
         controller.run();
-    }
-
-    private static class ObjRunner implements ComparatorController.Runner {
-
-        Graph graph;
-
-        @Override
-        public void prepare( Properties connectionProperties ) throws IOException {
-            GraphDAO dao = new SqliteGraphDAO( connectionProperties );
-            graph = dao.loadGraph();
-        }
-
-        @Override
-        public boolean run( Input input ) {
-            final RoutingAlgorithm alg = new DijkstraAlgorithm();
-            return input.stream().map( new Function<InputElement, Boolean>() {
-                @Override
-                public Boolean apply( InputElement x ) {
-                    Optional<cz.certicon.routing.model.Route> route = alg.route( Metric.LENGTH, graph.getNodeById( x.getSourceNodeId() ), graph.getNodeById( x.getTargetNodeId() ) );
-                    java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
-                    if ( !route.isPresent() ) {
-                        return false;
-                    }
-                    return route.get().getEdgeList().stream()
-                            .mapToLong( e -> ( (Edge) e ).getId() )
-                            .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
-                }
-            } ).allMatch( x -> x );
-        }
-    }
-
-    private static class OptRunner implements ComparatorController.Runner {
-
-        OptimizedGraph graph;
-
-        @Override
-        public void prepare( Properties connectionProperties ) throws IOException {
-            OptimizedGraphDAO dao = new OptimizedGraphDAO( connectionProperties );
-            graph = dao.loadGraph();
-        }
-
-        @Override
-        public boolean run( Input input ) {
-            final MultilevelDijkstra alg = new MultilevelDijkstra();
-            IdSupplier counter = new IdSupplier( 0 );
-            return input.stream().map( ( InputElement x ) -> {
-                Optional<Route> route = alg.route( graph, x.getSourceNodeId(), x.getTargetNodeId(), Metric.LENGTH );
-                java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
-                if ( !route.isPresent() ) {
-                    System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );
-                    System.out.print( " (" + x.getSourceNodeId() + " -> " + x.getTargetNodeId() + ")" );
-                    System.out.println( ", not found " + counter.next() + "/" + input.size() );
-                    return true;
-                }
-                boolean result = Arrays.stream( route.get().getEdges() )
-                        .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
-                if ( !result ) {
-                    System.out.println( "Routes do not match for id: " + x.getId() );
-                    System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
-                    System.out.println( "Route res: length = " + (int) route.get().calculateDistance( graph, Metric.LENGTH ) + ", time = " + (int) route.get().calculateDistance( graph, Metric.TIME ) + " s, edges = " + Arrays.stream( route.get().getEdges() ).mapToObj( Long::toString ).collect( Collectors.joining( " " ) ) );
-                }
-                return result;
-            } ).allMatch( x -> x );
-        }
-    }
-
-    private static class SaraRunner implements ComparatorController.Runner {
-
-        SaraGraph graph;
-        OverlayBuilder overlay;
-
-        @Override
-        public void prepare( Properties connectionProperties ) throws IOException {
-            OverlayCreator creator = new OverlayCreator();
-            OverlayCreator.SaraSetup setup = creator.getSetup();
-
-            setup.setSpatialModulePath( connectionProperties.getProperty( "spatialite_path" ) );
-            String dbUrl = connectionProperties.getProperty( "url" ).substring( "jdbc:sqlite:".length() );
-            dbUrl = dbUrl.substring( 0, dbUrl.length() - ".sqlite".length() );
-            int lastSlashIdx = dbUrl.lastIndexOf( "/" );
-            String dbFolder = dbUrl.substring( 0, lastSlashIdx + 1 );
-            String dbName = dbUrl.substring( lastSlashIdx + 1 );
-            setup.setDbFolder( dbFolder );
-            setup.setRandomSeed( 123 );
-            setup.setLayerCount( 5 );
-            setup.setMaxCellSize( 20 );
-            setup.setNumberOfAssemblyRuns( 1 );
-
-            // D://prog-20-5.sqlite
-            setup.setDbName( dbName );
-
-            // punch and save
-            //setup.runPunch = true;
-            //no punch, load only
-            setup.setRunPunch( true );
-
-            overlay = creator.createBuilder();
-            overlay.buildOverlays();
-
-            graph = overlay.getGraph();
-        }
-
-        @Override
-        public boolean run( Input input ) {
-            MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm();
-            MLDRecursiveRouteUnpacker unpacker = new MLDRecursiveRouteUnpacker();
-            IdSupplier counter = new IdSupplier( 0 );
-            return input.stream().map( ( InputElement x ) -> {
-                SaraNode source = graph.getNodeById( x.getSourceNodeId() );
-                SaraNode target = graph.getNodeById( x.getTargetNodeId() );
-                Optional<cz.certicon.routing.model.Route> route = alg.route( overlay, Metric.LENGTH, source, target, unpacker );
-                java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
-                if ( !route.isPresent() ) {
-                    System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );
-                    System.out.print( " (" + ( source.getId() ) + " -> " + ( target.getId() ) + ")" );
-                    System.out.println( ", not found " + counter.next() + "/" + input.size() );
-                    return true;
-                }
-                boolean result = route.get().getEdgeList().stream()
-                        .mapToLong( e -> ( (Edge) e ).getId() )
-                        .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
-                if ( !result ) {
-                    System.out.println( "Routes do not match for id: " + x.getId() );
-                    System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
-                    System.out.println( "Route res: length = " + (int) route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + (int) route.get().calculateDistance( Metric.TIME ).getValue() + " s, edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
-                }
-                return result;
-            } ).allMatch( x -> x );
-        }
-
     }
 
 }

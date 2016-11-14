@@ -10,7 +10,7 @@ import lombok.experimental.Wither;
 
 /**
  *
- * @author Michael Blaha {@literal <michael.blaha@gmail.com>}
+ * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 @Value
 @Wither

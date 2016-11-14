@@ -10,17 +10,13 @@ import cz.blahami2.routingsaratester.generator.logic.DataSetGenerator;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.common.model.InputElement;
-import cz.certicon.routing.algorithm.DijkstraAlgorithm;
-import cz.certicon.routing.algorithm.RoutingAlgorithm;
 import cz.certicon.routing.data.GraphDAO;
 import cz.certicon.routing.data.SqliteGraphDAO;
 import cz.certicon.routing.data.basic.DataDestination;
 import cz.certicon.routing.model.Route;
-import cz.certicon.routing.model.basic.Pair;
 import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.Metric;
-import cz.certicon.routing.model.graph.Node;
 import cz.certicon.routing.model.values.Distance;
 import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.LengthUnits;
@@ -28,8 +24,6 @@ import cz.certicon.routing.model.values.Time;
 import cz.certicon.routing.model.values.TimeUnits;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -38,7 +32,7 @@ import java.util.stream.Collectors;
 
 /**
  *
- * @author Michael Blaha {@literal <michael.blaha@gmail.com>}
+ * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 public class DataSetController implements Runnable {
 

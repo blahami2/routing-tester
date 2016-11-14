@@ -8,13 +8,14 @@ package cz.blahami2.routingsaratester.comparator.controller;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.certicon.routing.model.values.Time;
 import cz.certicon.routing.model.values.TimeUnits;
+import cz.certicon.routing.utils.measuring.TimeLogger;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import java.io.IOException;
 import java.util.Properties;
 
 /**
  *
- * @author Michael Blaha {@literal <michael.blaha@gmail.com>}
+ * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 public class ComparatorController {
 
@@ -45,28 +46,22 @@ public class ComparatorController {
         time.stop();
         Time secondPrepareTime = time.getTime();
         System.out.println( "Done in " + secondPrepareTime.toString() );
-        System.out.println( "Warming up first..." );
-        firstRunner.run( input );
+        System.out.println( "Warming up first..." );;
+        firstRunner.run( input, TimeLogger.getTimeMeasurement( "Warmup1" ) );
         System.out.println( "Warming up second..." );
-        secondRunner.run( input );
+        secondRunner.run( input, TimeLogger.getTimeMeasurement( "Warmup2" ) );
         System.out.println( "Running first..." );
-        time.start();
-        boolean firstResult = firstRunner.run( input );
-        time.stop();
-        Time firstExecutionTime = time.getTime();
-        System.out.println( "Done in " + firstExecutionTime.toString() + " with result = " + firstResult );
+        boolean firstResult = firstRunner.run( input, TimeLogger.getTimeMeasurement( "Run1" ) );
+        System.out.println( "Done in " + TimeLogger.getTimeMeasurement( "Run1" ).getTimeString() + " with result = " + firstResult );
         System.out.println( "Running second..." );
-        time.start();
-        boolean secondResult = secondRunner.run( input );
-        time.stop();
-        Time secondExecutionTime = time.getTime();
-        System.out.println( "Done in " + secondExecutionTime.toString() + " with result = " + secondResult );
+        boolean secondResult = secondRunner.run( input, TimeLogger.getTimeMeasurement( "Run2" ) );
+        System.out.println( "Done in " + TimeLogger.getTimeMeasurement( "Run2" ).getTimeString() + " with result = " + secondResult );
     }
 
     public interface Runner {
 
         void prepare( Properties connectionProperties ) throws IOException;
 
-        boolean run( Input input );
+        boolean run( Input input, TimeMeasurement routeTime );
     }
 }
