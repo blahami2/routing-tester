@@ -127,7 +127,7 @@ public class DataSetGenerator {
             Set<Integer> unfinished1 = IntStream.range( 0, intervals ).boxed().collect( Collectors.toSet() );
             for ( int j = 0; j < intervals; j++ ) {
                 if ( unfinished1.contains( j ) ) {
-                    Counter direction = new Counter( 0, intervals - j - 1 );
+                    Counter direction = new Counter( -j, intervals - j - 1 );
                     for ( int k = 0; k < maxIterations && unfinished1.contains( j ); k++ ) {
                         int intervalIdx = j;
                         int minLength = intervalSize * j;
@@ -140,6 +140,7 @@ public class DataSetGenerator {
                             Route<N, E> route = optionalRoute.get();
                             Distance distance = route.calculateDistance( metric );
                             int length = (int) distance.getValue();
+//                            System.out.println("interval[" + j + "], iteration[" + k + "], pair: " + pair.a.getId() + "-" + pair.b.getId() + ", length = " + length + ", min = " + minLength + ", max = " + maxLength + ", counter = " + direction);
                             if ( length < minLength ) {
                                 direction.increment();
                             } else if ( length > maxLength ) {

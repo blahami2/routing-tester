@@ -60,7 +60,7 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
         overlay = creator.createBuilder();
         overlay.buildOverlays();
 
-        graph = overlay.getGraph();
+        graph = overlay.getSaraGraph();
     }
 
     @Override

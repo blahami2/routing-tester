@@ -6,11 +6,13 @@
 package cz.blahami2.routingsaratester.common.model;
 
 import static cz.certicon.routing.utils.validation.Validation.*;
+import lombok.ToString;
 
 /**
  *
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
+@ToString
 public class Counter {
 
     private int value = 0;
@@ -55,5 +57,7 @@ public class Counter {
     public int getValue() {
         return value;
     }
+    
+    
 
 }
