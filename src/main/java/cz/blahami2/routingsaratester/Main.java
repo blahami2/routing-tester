@@ -13,6 +13,7 @@ import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
 import cz.blahami2.routingsaratester.plot.model.GralPlot;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedDijkstraRunner;
+import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedSaraRunner;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.PrimitiveBasedDijkstraRunner;
 import cz.blahami2.routingsaratester.testrunner.model.TestResult;
 import cz.blahami2.utils.table.data.CsvTableExporter;
@@ -58,6 +59,7 @@ import cz.certicon.routing.utils.progress.ProgressListener;
 import cz.certicon.routing.utils.progress.SimpleProgressListener;
 import cz.certicon.routing.view.DebugViewer;
 import cz.certicon.routing.view.JxDebugViewer;
+import cz.certicon.routing.view.jxmap.AbstractJxMapViewer;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -72,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.function.Function;
 import javax.swing.JFrame;
@@ -98,9 +101,9 @@ public class Main {
 //        main.testVisualiser();
 //        main.generate();
 //        main.compareDijkstras();
-        main.czRegions();
+//        main.czRegions();
 //        main.displayWanderingNodes();
-//        main.displayGraph();
+        main.displayGraph();
     }
 
     private List<String> toList( PreprocessingInput options, TestResult result ) {
@@ -301,30 +304,53 @@ Default
         Properties properties = loadProperties();
         GraphDAO graphDAO = new SqliteGraphDAO( properties );
         Graph graph = graphDAO.loadGraph();
-        DebugViewer viewer = new JxDebugViewer( new SqliteGraphDataDAO( properties ), graph, 500 );
-        Random rand = new Random();
-        List<Long> addedEdges = new ArrayList<>();
-        for ( int i = 0; i < 20; i++ ) {
-            int cnt = rand.nextInt( graph.getEdgeCount() );
-            Iterator edges = graph.getEdges();
-            for ( int j = 0; j < cnt - 1; j++ ) {
-                edges.next();
+        DebugViewer viewer = new JxDebugViewer( new SqliteGraphDataDAO( properties ), graph, 0 );
+        ( (AbstractJxMapViewer) viewer ).setCentering( true );
+        Scanner sc = new Scanner( System.in );
+        while ( true ) {
+            String type = sc.next();
+            if ( type.equals( "q" ) ) {
+                System.exit( 0 );
             }
-            long edgeId = ( (Edge) edges.next() ).getId();
-            viewer.displayEdge( edgeId );
-            addedEdges.add( edgeId );
-        }
-        for ( int i = 0; i < 20; i++ ) {
-            int cnt = rand.nextInt( graph.getNodesCount() );
-            Iterator nodes = graph.getNodes();
-            for ( int j = 0; j < cnt - 1; j++ ) {
-                nodes.next();
+            long id = sc.nextLong();
+            switch ( type ) {
+                case "n":
+                    viewer.displayNode( id );
+                    break;
+                case "e":
+                    viewer.displayEdge( id );
+                    break;
+                case "ce":
+                    viewer.closeEdge( id );
+                    break;
+                default:
+                    System.out.println( "Wrong type: '" + type + "'" );
+                    break;
             }
-            viewer.displayNode( ( (Node) nodes.next() ).getId() );
         }
-        for ( int i = 0; i < 10; i++ ) {
-            viewer.closeEdge( addedEdges.get( i ) );
-        }
+//        Random rand = new Random();
+//        List<Long> addedEdges = new ArrayList<>();
+//        for ( int i = 0; i < 20; i++ ) {
+//            int cnt = rand.nextInt( graph.getEdgeCount() );
+//            Iterator edges = graph.getEdges();
+//            for ( int j = 0; j < cnt - 1; j++ ) {
+//                edges.next();
+//            }
+//            long edgeId = ( (Edge) edges.next() ).getId();
+//            viewer.displayEdge( edgeId );
+//            addedEdges.add( edgeId );
+//        }
+//        for ( int i = 0; i < 20; i++ ) {
+//            int cnt = rand.nextInt( graph.getNodesCount() );
+//            Iterator nodes = graph.getNodes();
+//            for ( int j = 0; j < cnt - 1; j++ ) {
+//                nodes.next();
+//            }
+//            viewer.displayNode( ( (Node) nodes.next() ).getId() );
+//        }
+//        for ( int i = 0; i < 10; i++ ) {
+//            viewer.closeEdge( addedEdges.get( i ) );
+//        }
     }
 
     /**
@@ -350,8 +376,8 @@ Default
      */
     private void compareDijkstras() throws IOException {
         InputDAO inputDAO = new FileInputDAO();
-        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_prague_length.txt" ) ) );
-        ComparatorController controller = new ComparatorController( loadProperties(), input, new ObjectBasedDijkstraRunner(), new PrimitiveBasedDijkstraRunner() );
+        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_length.txt" ) ) );
+        ComparatorController controller = new ComparatorController( loadProperties(), input, new ObjectBasedSaraRunner(), new ObjectBasedDijkstraRunner() );
         controller.run();
     }
 
@@ -402,13 +428,13 @@ Default
 
         };
         PreprocessingInput input = DEFAULT_OPTIONS
-                .withCellSize( 100 )
+                .withCellSize( 20 )
                 .withCellRatio( 1 )
                 .withCoreRatio( 0.1 )
                 .withLowIntervalProbability( 0.03 )
                 .withLowIntervalLimit( 0.6 )
                 .withNumberOfAssemblyRuns( 100 ) // 100
-                .withNumberOfLayers( 2 ); // 5
+                .withNumberOfLayers( 3 ); // 5
 
         IdSupplier idSupplier = new IdSupplier( 0 );
         SimpleDatabase database = SimpleDatabase.newSqliteDatabase( properties );
@@ -658,6 +684,6 @@ Default
             System.out.println( "region id = " + cell.getId() );
         }
         System.out.println( "Displaying..." );
-//        DisplayUtils.display( g );
+        DisplayUtils.display( g );
     }
 }

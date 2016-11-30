@@ -10,6 +10,8 @@ import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilder;
 import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayCreator;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.ZeroNode;
+import cz.certicon.routing.algorithm.sara.query.mld.MLDFullMemoryRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
 import cz.certicon.routing.model.basic.IdSupplier;
@@ -34,6 +36,7 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
 
     @Override
     public void prepare( Properties connectionProperties ) throws IOException {
+        OverlayBuilder.keepShortcuts = true;
         OverlayCreator creator = new OverlayCreator();
         OverlayCreator.SaraSetup setup = creator.getSetup();
 
@@ -44,10 +47,10 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
         String dbFolder = dbUrl.substring( 0, lastSlashIdx + 1 );
         String dbName = dbUrl.substring( lastSlashIdx + 1 );
         setup.setDbFolder( dbFolder );
-        setup.setRandomSeed( 123 );
-        setup.setLayerCount( 5 );
-        setup.setMaxCellSize( 20 );
-        setup.setNumberOfAssemblyRuns( 1 );
+//        setup.setRandomSeed( 123 );
+//        setup.setLayerCount( 5 );
+//        setup.setMaxCellSize( 20 );
+//        setup.setNumberOfAssemblyRuns( 1 );
 
         // D://prog-20-5.sqlite
         setup.setDbName( dbName );
@@ -55,7 +58,7 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
         // punch and save
         //setup.runPunch = true;
         //no punch, load only
-        setup.setRunPunch( true );
+        setup.setRunPunch( false );
 
         overlay = creator.createBuilder();
         overlay.buildOverlays();
@@ -65,14 +68,16 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
 
     @Override
     public boolean run( Input input, TimeMeasurement routeTime ) {
-        MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm();
-        MLDRecursiveRouteUnpacker unpacker = new MLDRecursiveRouteUnpacker();
         IdSupplier counter = new IdSupplier( 0 );
         return input.stream().map( ( InputElement x ) -> {
+            MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm();
+            MLDFullMemoryRouteUnpacker unpacker = new MLDFullMemoryRouteUnpacker();
             SaraNode source = graph.getNodeById( x.getSourceNodeId() );
             SaraNode target = graph.getNodeById( x.getTargetNodeId() );
+            ZeroNode zeroSource = overlay.getZeroNode( source );
+            ZeroNode zeroTarget = overlay.getZeroNode( target );
             routeTime.continue_();
-            Optional<cz.certicon.routing.model.Route> route = alg.route( overlay, Metric.LENGTH, source, target, unpacker );
+            Optional<cz.certicon.routing.model.Route> route = alg.route( overlay, Metric.LENGTH, zeroSource, zeroTarget, unpacker );
             routeTime.pause();
             java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
             if ( !route.isPresent() ) {
