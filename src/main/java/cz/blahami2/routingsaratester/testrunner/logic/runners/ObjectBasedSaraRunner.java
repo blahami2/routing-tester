@@ -14,9 +14,11 @@ import cz.certicon.routing.algorithm.sara.preprocessing.overlay.ZeroNode;
 import cz.certicon.routing.algorithm.sara.query.mld.MLDFullMemoryRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
+import cz.certicon.routing.model.Route;
 import cz.certicon.routing.model.basic.IdSupplier;
 import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Metric;
+import cz.certicon.routing.model.graph.SaraEdge;
 import cz.certicon.routing.model.graph.SaraGraph;
 import cz.certicon.routing.model.graph.SaraNode;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
@@ -70,14 +72,13 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
     public boolean run( Input input, TimeMeasurement routeTime ) {
         IdSupplier counter = new IdSupplier( 0 );
         return input.stream().map( ( InputElement x ) -> {
-            MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm();
-            MLDFullMemoryRouteUnpacker unpacker = new MLDFullMemoryRouteUnpacker();
+            MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm(overlay,new MLDFullMemoryRouteUnpacker() );
             SaraNode source = graph.getNodeById( x.getSourceNodeId() );
             SaraNode target = graph.getNodeById( x.getTargetNodeId() );
             ZeroNode zeroSource = overlay.getZeroNode( source );
             ZeroNode zeroTarget = overlay.getZeroNode( target );
             routeTime.continue_();
-            Optional<cz.certicon.routing.model.Route> route = alg.route( overlay, Metric.LENGTH, zeroSource, zeroTarget, unpacker );
+            Optional<Route<SaraNode, SaraEdge>> route = alg.route( Metric.LENGTH, zeroSource, zeroTarget );
             routeTime.pause();
             java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
             if ( !route.isPresent() ) {

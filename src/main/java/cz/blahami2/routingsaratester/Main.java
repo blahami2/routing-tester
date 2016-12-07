@@ -10,6 +10,7 @@ import cz.blahami2.routingsaratester.common.data.FileInputDAO;
 import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
+import cz.blahami2.routingsaratester.parametertuning.ParameterTuningController;
 import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
 import cz.blahami2.routingsaratester.plot.model.GralPlot;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedDijkstraRunner;
@@ -98,82 +99,36 @@ public class Main {
 //        main.test();
 //        main.reduce();
 //        main.testPlot();
-//        main.testVisualiser();
+        main.testVisualiser();
 //        main.generate();
 //        main.compareDijkstras();
 //        main.czRegions();
 //        main.displayWanderingNodes();
-        main.displayGraph();
+//        main.displayGraph();
     }
 
-    private List<String> toList( PreprocessingInput options, TestResult result ) {
-        List<String> list = new ArrayList<>();
-        list.add( Arrays.toString( options.getCellSizes() ) );
-        list.add( Double.toString( options.getCellRatio() ) );
-        list.add( Double.toString( options.getCoreRatio() ) );
-        list.add( Double.toString( options.getLowIntervalProbability() ) );
-        list.add( Double.toString( options.getLowIntervalLimit() ) );
-        list.add( Integer.toString( options.getNumberOfAssemblyRuns() ) );
-        list.add( Integer.toString( result.getNumberOfCells() ) );
-        list.add( Integer.toString( result.getMinimalCellSize() ) );
-        list.add( Integer.toString( result.getMaximalCellSize() ) );
-        list.add( Integer.toString( result.getMedianCellSize() ) );
-        list.add( Integer.toString( (int) result.getAverageCellSize() ) );
-        list.add( Integer.toString( result.getNumberOfCutEdges() ) );
-        list.add( Long.toString( result.getFilteringTime().getValue( TimeUnits.MILLISECONDS ) ) );
-        list.add( Long.toString( result.getAssemblyTime().getValue( TimeUnits.MILLISECONDS ) ) );
-        return list;
-    }
+//    private List<String> toList( PreprocessingInput options, TestResult result ) {
+//        List<String> list = new ArrayList<>();
+//        list.add( Arrays.toString( options.getCellSizes() ) );
+//        list.add( Double.toString( options.getCellRatio() ) );
+//        list.add( Double.toString( options.getCoreRatio() ) );
+//        list.add( Double.toString( options.getLowIntervalProbability() ) );
+//        list.add( Double.toString( options.getLowIntervalLimit() ) );
+//        list.add( Integer.toString( options.getNumberOfAssemblyRuns() ) );
+//        list.add( Integer.toString( result.getNumberOfCells() ) );
+//        list.add( Integer.toString( result.getMinimalCellSize() ) );
+//        list.add( Integer.toString( result.getMaximalCellSize() ) );
+//        list.add( Integer.toString( result.getMedianCellSize() ) );
+//        list.add( Integer.toString( (int) result.getAverageCellSize() ) );
+//        list.add( Integer.toString( result.getNumberOfCutEdges() ) );
+//        list.add( Long.toString( result.getFilteringTime().getValue( TimeUnits.MILLISECONDS ) ) );
+//        list.add( Long.toString( result.getAssemblyTime().getValue( TimeUnits.MILLISECONDS ) ) );
+//        return list;
+//    }
 
-    /*
-    Cell size: 1000; 50000; *2
-    Cell ratio: 0.1; 1; +0.1
-    Core ratio: 0.1; 1; +0.1
-    Low interval probability: 0.01; 0.5; *2
-    Low interval <0,?>: 0.1; 0.9; +0.1
-    Number of assembly runs: 1; 1000; +50
-Default
-    Cell size: 10000
-    Cell ratio: 1
-    Core ratio: 0.1
-    Low interval probability: 0.03
-    Low interval <0,?>: 0.6
-    Number of assembly runs: 1000
-     */
-    /**
-     * Run parameter testing. Below is an example with cell size testing.
-     *
-     * @throws IOException exception
-     */
+    
     public void run() throws IOException {
-        TableBuilder<String> tableBuilder = new DoubleListTableBuilder<>();
-        tableBuilder.setHeaders( Arrays.asList( "cell size", "cell ratio", "core ratio", "low interval prob", "low interval lim", "#assembly runs", "#cells", "min cell", "max cell", "median cell", "avg cell", "#cut edges", "filtering[ms]", "assembly[ms]", "length[ms]", "time[ms]" ) );
-        GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
-        Graph graph = graphDAO.loadGraph();
-
-        TableBuilder<Double> builder = new DoubleListTableBuilder<>();
-        builder.setHeader( 0, "Cell size" ); // set x label
-        builder.setHeader( 1, "#cut edges" ); // set y dataset #1 label
-        int rowCounter = 0;
-
-        System.out.println( "Testing cell size..." );
-        for ( int cellSize = 10; cellSize < 1000; cellSize *= 2 ) {
-            PreprocessingInput options = DEFAULT_OPTIONS.withCellSize( cellSize );
-            TestRunner runner = new TestRunner( graph, options );
-            TestResult result = runner.runForResult();
-            tableBuilder.addRow( toList( options, result ) );
-
-            builder.setCell( rowCounter, 0, (double) cellSize ); // set x cellSize
-            builder.setCell( rowCounter, 1, (double) result.getNumberOfCutEdges() ); // set number of cut edges for the given cell size
-            rowCounter++;
-        }
-        Table<String> table = tableBuilder.build();
-        TableExporter exporter = new CsvTableExporter( CsvTableExporter.Delimiter.SEMICOLON );
-        exporter.export( new File( "testing_result.csv" ), table, str -> str );
-
-        // Create plot
-        GralPlot plot = new GralPlot( builder.build(), Function.identity() ); // create new instance with the table and a mapper from Double to Double (see TableBuilder declaration)
-        plot.export( new File( "graph.png" ) ); // export image into graph.png
+        new ParameterTuningController(loadProperties()).run();
     }
 
     /**
@@ -322,6 +277,12 @@ Default
                     break;
                 case "ce":
                     viewer.closeEdge( id );
+                    break;
+                case "rn":
+                    viewer.removeNode( id );
+                    break;
+                case "re":
+                    viewer.removeEdge( id );
                     break;
                 default:
                     System.out.println( "Wrong type: '" + type + "'" );
