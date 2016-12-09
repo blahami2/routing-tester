@@ -7,20 +7,68 @@ package cz.blahami2.routingsaratester.parametertuning.model;
 
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 
+import java.util.Iterator;
+
 /**
- *
- * @author Michael Blaha {@literal <blahami2@gmail.com>}
  * @param <T> value type
+ * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
-public interface Parameter<T extends Comparable<T>> {
+public interface Parameter<T extends Comparable<T>> extends Iterable<T> {
 
-    public String getHeader();
+    PreprocessingInput changeInput( PreprocessingInput input, T currentValue );
 
-    public PreprocessingInput changeInput( PreprocessingInput input, T currentValue );
+    default Iterable<T> iterable() {
+        return () -> iterator();
+    }
 
-    public T initialValue();
+    @Override
+    default Iterator<T> iterator() {
+        return new Iterator<T>() {
+            T currentValue = null;
+            T finalValue = finalValue();
 
-    public T finalValue();
+            @Override
+            public boolean hasNext() {
+                if(currentValue == null){
+                    return initialValue().compareTo( finalValue ) <= 0;
+                }
+                return increment( currentValue ).compareTo( finalValue ) <= 0;
+            }
 
-    public T increment( T currentValue );
+            @Override
+            public T next() {
+                if ( currentValue == null ) {
+                    currentValue = initialValue();
+                } else {
+                    currentValue = increment( currentValue );
+                }
+                return currentValue;
+            }
+        };
+    }
+
+    default Iterable<PreprocessingInput> iterable( PreprocessingInput defaultPreprocessingInput ) {
+        return () -> iterator( defaultPreprocessingInput );
+    }
+
+    default Iterator<PreprocessingInput> iterator( PreprocessingInput defaultPreprocessingInput ) {
+        final Iterator<T> it = iterator();
+        return new Iterator<PreprocessingInput>() {
+            @Override
+            public boolean hasNext() {
+                return it.hasNext();
+            }
+
+            @Override
+            public PreprocessingInput next() {
+                return changeInput( defaultPreprocessingInput, it.next() );
+            }
+        };
+    }
+
+    T initialValue();
+
+    T finalValue();
+
+    T increment( T currentValue );
 }

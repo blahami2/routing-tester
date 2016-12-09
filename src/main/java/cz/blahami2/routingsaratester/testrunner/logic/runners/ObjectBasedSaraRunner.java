@@ -9,20 +9,20 @@ import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilder;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilderSetup;
 import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayCreator;
 import cz.certicon.routing.algorithm.sara.preprocessing.overlay.ZeroNode;
 import cz.certicon.routing.algorithm.sara.query.mld.MLDFullMemoryRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
+import cz.certicon.routing.data.GraphDAO;
+import cz.certicon.routing.data.SqliteGraphDAO;
 import cz.certicon.routing.model.Route;
 import cz.certicon.routing.model.basic.IdSupplier;
-import cz.certicon.routing.model.graph.Edge;
-import cz.certicon.routing.model.graph.Metric;
-import cz.certicon.routing.model.graph.SaraEdge;
-import cz.certicon.routing.model.graph.SaraGraph;
-import cz.certicon.routing.model.graph.SaraNode;
+import cz.certicon.routing.model.graph.*;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java8.util.Optional;
@@ -38,34 +38,13 @@ public class ObjectBasedSaraRunner implements ComparatorController.Runner {
 
     @Override
     public void prepare( Properties connectionProperties ) throws IOException {
-        OverlayBuilder.keepShortcuts = true;
-        OverlayCreator creator = new OverlayCreator();
-        OverlayCreator.SaraSetup setup = creator.getSetup();
-
-        setup.setSpatialModulePath( connectionProperties.getProperty( "spatialite_path" ) );
-        String dbUrl = connectionProperties.getProperty( "url" ).substring( "jdbc:sqlite:".length() );
-        dbUrl = dbUrl.substring( 0, dbUrl.length() - ".sqlite".length() );
-        int lastSlashIdx = dbUrl.lastIndexOf( "/" );
-        String dbFolder = dbUrl.substring( 0, lastSlashIdx + 1 );
-        String dbName = dbUrl.substring( lastSlashIdx + 1 );
-        setup.setDbFolder( dbFolder );
-//        setup.setRandomSeed( 123 );
-//        setup.setLayerCount( 5 );
-//        setup.setMaxCellSize( 20 );
-//        setup.setNumberOfAssemblyRuns( 1 );
-
-        // D://prog-20-5.sqlite
-        setup.setDbName( dbName );
-
-        // punch and save
-        //setup.runPunch = true;
-        //no punch, load only
-        setup.setRunPunch( false );
-
-        overlay = creator.createBuilder();
+        GraphDAO dao = new SqliteGraphDAO( connectionProperties );
+        graph = dao.loadSaraGraph();
+        OverlayBuilderSetup overlayBuilderSetup = new OverlayBuilderSetup();
+        overlayBuilderSetup.setKeepSortcuts( true );
+        overlayBuilderSetup.setMetric( EnumSet.allOf( Metric.class ) );
+        overlay = new OverlayBuilder( graph, overlayBuilderSetup );
         overlay.buildOverlays();
-
-        graph = overlay.getSaraGraph();
     }
 
     @Override

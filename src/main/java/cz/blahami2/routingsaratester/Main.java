@@ -10,22 +10,24 @@ import cz.blahami2.routingsaratester.common.data.FileInputDAO;
 import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
+import cz.blahami2.routingsaratester.generator.logic.DataSetGenerator;
+import cz.blahami2.routingsaratester.generator.logic.MetricDataSetGenerator;
+import cz.blahami2.routingsaratester.generator.logic.RankDataSetGenerator;
+import cz.blahami2.routingsaratester.parametertuning.IterativeParameterTuningStrategy;
+import cz.blahami2.routingsaratester.parametertuning.LatinSquareParameterTuningStrategy;
 import cz.blahami2.routingsaratester.parametertuning.ParameterTuningController;
-import cz.blahami2.routingsaratester.testrunner.logic.TestRunner;
+import cz.blahami2.routingsaratester.parametertuning.ParameterTuningStrategy;
+import cz.blahami2.routingsaratester.parametertuning.logic.parameters.LatinSquareParameterSupplier;
 import cz.blahami2.routingsaratester.plot.model.GralPlot;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedDijkstraRunner;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedSaraRunner;
-import cz.blahami2.routingsaratester.testrunner.logic.runners.PrimitiveBasedDijkstraRunner;
 import cz.blahami2.routingsaratester.testrunner.model.TestResult;
-import cz.blahami2.utils.table.data.CsvTableExporter;
-import cz.blahami2.utils.table.data.TableExporter;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
 import cz.blahami2.utils.table.model.Table;
 import cz.blahami2.utils.table.model.TableBuilder;
 import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
-import cz.certicon.routing.algorithm.sara.query.mld.EdgeDistancePair;
 import cz.certicon.routing.data.GraphDAO;
 import cz.certicon.routing.data.GraphDataDao;
 import cz.certicon.routing.data.GraphDataUpdater;
@@ -40,20 +42,17 @@ import cz.certicon.routing.data.processor.GraphComponentSearcher;
 import cz.certicon.routing.model.Identifiable;
 import cz.certicon.routing.model.basic.IdSupplier;
 import cz.certicon.routing.model.graph.Cell;
-import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.graph.Node;
 import cz.certicon.routing.model.graph.SaraEdge;
 import cz.certicon.routing.model.graph.SaraGraph;
 import cz.certicon.routing.model.graph.SaraNode;
-import cz.certicon.routing.model.graph.TurnTable;
 import cz.certicon.routing.model.values.Distance;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DatabaseUtils;
 import cz.certicon.routing.utils.DisplayUtils;
 import cz.certicon.routing.utils.RandomUtils;
-import cz.certicon.routing.utils.collections.Iterator;
 import cz.certicon.routing.utils.measuring.TimeLogger;
 import cz.certicon.routing.utils.measuring.TimeMeasurement;
 import cz.certicon.routing.utils.progress.ProgressListener;
@@ -61,27 +60,18 @@ import cz.certicon.routing.utils.progress.SimpleProgressListener;
 import cz.certicon.routing.view.DebugViewer;
 import cz.certicon.routing.view.JxDebugViewer;
 import cz.certicon.routing.view.jxmap.AbstractJxMapViewer;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import javax.swing.JFrame;
 
 /**
- *
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 public class Main {
@@ -90,7 +80,7 @@ public class Main {
 
     /**
      * @param args the command line arguments
-     * @throws java.io.IOException coz I can
+     * @throws java.io.IOException   coz I can
      * @throws java.sql.SQLException coz I can
      */
     public static void main( String[] args ) throws IOException, SQLException {
@@ -99,8 +89,8 @@ public class Main {
 //        main.test();
 //        main.reduce();
 //        main.testPlot();
-        main.testVisualiser();
-//        main.generate();
+//        main.testVisualiser();
+        main.generate();
 //        main.compareDijkstras();
 //        main.czRegions();
 //        main.displayWanderingNodes();
@@ -126,9 +116,15 @@ public class Main {
 //        return list;
 //    }
 
-    
+
     public void run() throws IOException {
-        new ParameterTuningController(loadProperties()).run();
+        InputDAO inputDAO = new FileInputDAO();
+        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_length.txt" ) ) );
+        LatinSquareParameterSupplier supplier = new LatinSquareParameterSupplier();
+        LatinSquareParameterSupplier.LatinSquareParameterMessenger messenger = supplier.apply( 7 );
+        ParameterTuningStrategy strategy = new LatinSquareParameterTuningStrategy( messenger.getParameters(), messenger.getTestMatrix() );
+        ParameterTuningController tuningController = new ParameterTuningController( loadProperties(), Arrays.asList( input ), strategy );
+        tuningController.run();
     }
 
     /**
@@ -318,12 +314,15 @@ public class Main {
      * Generates dataset of given size
      */
     private void generate() {
+//        DataSetGenerator generator = new MetricDataSetGenerator( 100, Distance.newInstance( 250000 ) );
+        DataSetGenerator generator = new RankDataSetGenerator( 100 );
         DataSetController controller = new DataSetController(
                 new FileInputDAO(),
-                new FileDataDestination( new File( "dataset_cz_length.txt" ) ),
+                new FileDataDestination( new File( "dataset_cz_rank_length.txt" ) ),
                 1000,
-                Distance.newInstance( 250000 ), // 40000
-                Metric.LENGTH
+                10,
+                Metric.LENGTH,
+                generator
         );
         controller.run();
     }
@@ -358,34 +357,34 @@ public class Main {
 //        }
         String urlBase = "jdbc:sqlite:C:\\Users\\blaha\\Documents\\NetBeansProjects\\RoutingParser\\";
         String[] files = {
-            "routing_sara_kraj_jihomoravsky.sqlite",
-            "routing_sara_kraj_karlovarsky.sqlite",
-            "routing_sara_kraj_kralovehradecky.sqlite",
-            "routing_sara_kraj_liberecky.sqlite",
-            "routing_sara_kraj_moravskoslezsky.sqlite",
-            "routing_sara_kraj_olomoucky.sqlite",
-            "routing_sara_kraj_pardubicky.sqlite",
-            "routing_sara_kraj_plzensky.sqlite",
-            "routing_sara_kraj_stredocesky.sqlite",
-            "routing_sara_kraj_ustecky.sqlite",
-            "routing_sara_kraj_vysocina.sqlite",
-            "routing_sara_kraj_jihocesky.sqlite",
-            "routing_sara_kraj_zlinsky.sqlite"
+                "routing_sara_kraj_jihomoravsky.sqlite",
+                "routing_sara_kraj_karlovarsky.sqlite",
+                "routing_sara_kraj_kralovehradecky.sqlite",
+                "routing_sara_kraj_liberecky.sqlite",
+                "routing_sara_kraj_moravskoslezsky.sqlite",
+                "routing_sara_kraj_olomoucky.sqlite",
+                "routing_sara_kraj_pardubicky.sqlite",
+                "routing_sara_kraj_plzensky.sqlite",
+                "routing_sara_kraj_stredocesky.sqlite",
+                "routing_sara_kraj_ustecky.sqlite",
+                "routing_sara_kraj_vysocina.sqlite",
+                "routing_sara_kraj_jihocesky.sqlite",
+                "routing_sara_kraj_zlinsky.sqlite"
         };
         String[] names = {
-            "Jihomoravský kraj",
-            "Karlovarský kraj",
-            "Královéhradecký kraj",
-            "Liberecký kraj",
-            "Moravskoslezský kraj",
-            "Olomoucký kraj",
-            "Pardubický kraj",
-            "Plzeňský kraj",
-            "Středočaský kraj",
-            "Ústecký kraj",
-            "Kraj Vysočina",
-            "Jihočeský kraj",
-            "Zlínský kraj"
+                "Jihomoravský kraj",
+                "Karlovarský kraj",
+                "Královéhradecký kraj",
+                "Liberecký kraj",
+                "Moravskoslezský kraj",
+                "Olomoucký kraj",
+                "Pardubický kraj",
+                "Plzeňský kraj",
+                "Středočaský kraj",
+                "Ústecký kraj",
+                "Kraj Vysočina",
+                "Jihočeský kraj",
+                "Zlínský kraj"
 
         };
         PreprocessingInput input = DEFAULT_OPTIONS
@@ -521,7 +520,7 @@ public class Main {
                 }
             }
         }
-        java.util.Iterator< Map.Entry<SaraNode, Integer>> neighborsIterator = neighbors.entrySet().iterator();
+        java.util.Iterator<Map.Entry<SaraNode, Integer>> neighborsIterator = neighbors.entrySet().iterator();
         while ( neighborsIterator.hasNext() ) {
             Map.Entry<SaraNode, Integer> entry = neighborsIterator.next();
             if ( entry.getValue() == entry.getKey().getEdgesCount() ) {

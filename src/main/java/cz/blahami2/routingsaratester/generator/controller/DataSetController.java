@@ -7,6 +7,7 @@ package cz.blahami2.routingsaratester.generator.controller;
 
 import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.generator.logic.DataSetGenerator;
+import cz.blahami2.routingsaratester.generator.logic.MetricDataSetGenerator;
 import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.common.model.InputElement;
@@ -22,6 +23,7 @@ import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.Time;
 import cz.certicon.routing.model.values.TimeUnits;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -31,31 +33,31 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- *
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 public class DataSetController implements Runnable {
 
     private final int size;
-    private final Distance estimatedMaxDistance;
+    private final int granularity;
     private final Metric metric;
     private final InputDAO inputDao;
     private final DataDestination destination;
+    private final DataSetGenerator dataSetGenerator;
 
-    public DataSetController( InputDAO inputDao, DataDestination destination, int size, Distance estimatedMaxDistance, Metric metric ) {
+    public DataSetController( InputDAO inputDao, DataDestination destination, int size, int granularity, Metric metric, DataSetGenerator dataSetGenerator ) {
         this.inputDao = inputDao;
         this.destination = destination;
         this.size = size;
-        this.estimatedMaxDistance = estimatedMaxDistance;
+        this.granularity = granularity;
         this.metric = metric;
+        this.dataSetGenerator = dataSetGenerator;
     }
 
     @Override
     public void run() {
         try {
             Graph graph = loadGraph();
-            DataSetGenerator generator = new DataSetGenerator();
-            List<DataSetElement> dataSet = generator.generateDataSet( size, 10, 100, estimatedMaxDistance, metric, graph );
+            List<DataSetElement> dataSet = dataSetGenerator.generateDataSet( size, granularity, metric, graph );
             Input.Builder builder = Input.builder();
             int elementCounter = 1;
             for ( DataSetElement dataSetElement : dataSet ) {

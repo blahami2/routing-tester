@@ -25,7 +25,7 @@ import java.util.stream.StreamSupport;
  */
 public class NodeGenerator {
 
-    public <N extends Node<N, E>, E extends Edge<N, E>> Stream<Pair<N, N>> generatorStream( Graph<? extends N, ? extends E> graph ) {
+    public <N extends Node<N, E>, E extends Edge<N, E>> Stream<N> generatorStream( Graph<? extends N, ? extends E> graph ) {
         return StreamSupport.stream( new NodeSpliterator( graph ), false );
     }
 

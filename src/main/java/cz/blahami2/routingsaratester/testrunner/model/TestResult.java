@@ -27,4 +27,8 @@ public class TestResult {
     Time filteringTime;
     Time assemblyTime;
     Time routingTime;
+    Time unpackTime;
+    long examinedNodes;
+    long relaxedEdges;
+    long visitedEdges;
 }
