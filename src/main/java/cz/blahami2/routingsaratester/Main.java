@@ -11,13 +11,14 @@ import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.blahami2.routingsaratester.generator.logic.DataSetGenerator;
-import cz.blahami2.routingsaratester.generator.logic.MetricDataSetGenerator;
 import cz.blahami2.routingsaratester.generator.logic.RankDataSetGenerator;
-import cz.blahami2.routingsaratester.parametertuning.IterativeParameterTuningStrategy;
-import cz.blahami2.routingsaratester.parametertuning.LatinSquareParameterTuningStrategy;
+import cz.blahami2.routingsaratester.parametertuning.logic.CombinationParameterTuningStrategy;
+import cz.blahami2.routingsaratester.parametertuning.logic.IterativeParameterTuningStrategy;
 import cz.blahami2.routingsaratester.parametertuning.ParameterTuningController;
 import cz.blahami2.routingsaratester.parametertuning.ParameterTuningStrategy;
+import cz.blahami2.routingsaratester.parametertuning.logic.parameters.FullCombinationParameterSupplier;
 import cz.blahami2.routingsaratester.parametertuning.logic.parameters.LatinSquareParameterSupplier;
+import cz.blahami2.routingsaratester.parametertuning.logic.parameters.ParameterSupplier;
 import cz.blahami2.routingsaratester.plot.model.GralPlot;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedDijkstraRunner;
 import cz.blahami2.routingsaratester.testrunner.logic.runners.ObjectBasedSaraRunner;
@@ -25,9 +26,15 @@ import cz.blahami2.routingsaratester.testrunner.model.TestResult;
 import cz.blahami2.utils.table.model.DoubleListTableBuilder;
 import cz.blahami2.utils.table.model.Table;
 import cz.blahami2.utils.table.model.TableBuilder;
+import cz.certicon.routing.algorithm.DijkstraAlgorithm;
 import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilder;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.OverlayBuilderSetup;
+import cz.certicon.routing.algorithm.sara.preprocessing.overlay.ZeroNode;
+import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
+import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
 import cz.certicon.routing.data.GraphDAO;
 import cz.certicon.routing.data.GraphDataDao;
 import cz.certicon.routing.data.GraphDataUpdater;
@@ -40,14 +47,9 @@ import cz.certicon.routing.data.basic.FileDataSource;
 import cz.certicon.routing.data.basic.database.SimpleDatabase;
 import cz.certicon.routing.data.processor.GraphComponentSearcher;
 import cz.certicon.routing.model.Identifiable;
+import cz.certicon.routing.model.Route;
 import cz.certicon.routing.model.basic.IdSupplier;
-import cz.certicon.routing.model.graph.Cell;
-import cz.certicon.routing.model.graph.Graph;
-import cz.certicon.routing.model.graph.Metric;
-import cz.certicon.routing.model.graph.Node;
-import cz.certicon.routing.model.graph.SaraEdge;
-import cz.certicon.routing.model.graph.SaraGraph;
-import cz.certicon.routing.model.graph.SaraNode;
+import cz.certicon.routing.model.graph.*;
 import cz.certicon.routing.model.values.Distance;
 import cz.certicon.routing.model.values.TimeUnits;
 import cz.certicon.routing.utils.DatabaseUtils;
@@ -69,6 +71,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.swing.JFrame;
 
 /**
@@ -76,7 +79,21 @@ import javax.swing.JFrame;
  */
 public class Main {
 
-    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 10000, 1, 0.1, 0.03, 0.6, 200, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3 
+    private enum Tasks {
+        ALGORITHM_COMPARISON,
+        DATASET_GENERATE,
+        GRAPH_PREPROCESS,
+        GRAPH_REDUCE,
+        GRAPH_REGIONS,
+        PARAMETER_TUNING,
+        PLOT_TEST,
+        ROUTE,
+        VIEW_DEBUG,
+        VIEW_GRAPH,
+        VIEW_WANDERING_NODES
+    }
+
+    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 40, 1, 0.1, 0.03, 0.6, 10, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3
 
     /**
      * @param args the command line arguments
@@ -85,12 +102,48 @@ public class Main {
      */
     public static void main( String[] args ) throws IOException, SQLException {
         Main main = new Main();
+        switch ( Tasks.PARAMETER_TUNING ) {
+            case ALGORITHM_COMPARISON:
+                main.compareDijkstras();
+                break;
+            case DATASET_GENERATE:
+                main.generate();
+                break;
+            case GRAPH_PREPROCESS:
+                main.test();
+                break;
+            case GRAPH_REDUCE:
+                main.reduce();
+                break;
+            case GRAPH_REGIONS:
+                main.czRegions();
+                break;
+            case PARAMETER_TUNING:
+                main.run();
+                break;
+            case PLOT_TEST:
+                main.testPlot();
+                break;
+            case ROUTE:
+                main.route();
+                break;
+            case VIEW_DEBUG:
+                main.testVisualiser();
+                break;
+            case VIEW_GRAPH:
+                main.displayGraph();
+                break;
+            case VIEW_WANDERING_NODES:
+                main.displayWanderingNodes();
+                break;
+        }
 //        main.run();
+//        main.test();
 //        main.test();
 //        main.reduce();
 //        main.testPlot();
 //        main.testVisualiser();
-        main.generate();
+//        main.generate();
 //        main.compareDijkstras();
 //        main.czRegions();
 //        main.displayWanderingNodes();
@@ -116,14 +169,46 @@ public class Main {
 //        return list;
 //    }
 
+    public void route() throws IOException {
+        route( Metric.LENGTH, 33290, 45746 );
+    }
+
+    public void route( Metric metric, long sourceId, long targetId ) throws IOException {
+        GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
+        SaraGraph saraGraph = graphDAO.loadSaraGraph();
+        SaraNode source = saraGraph.getNodeById( sourceId );
+        SaraNode target = saraGraph.getNodeById( targetId );
+        // create overlay graph
+        OverlayBuilderSetup overlayBuilderSetup = new OverlayBuilderSetup();
+        overlayBuilderSetup.setKeepSortcuts( false );
+        OverlayBuilder overlay = new OverlayBuilder( saraGraph, overlayBuilderSetup );
+        overlay.buildOverlays();
+        ZeroNode zeroSource = overlay.getZeroNode( source );
+        ZeroNode zeroTarget = overlay.getZeroNode( target );
+        MultilevelDijkstraAlgorithm alg = new MultilevelDijkstraAlgorithm( overlay, new MLDRecursiveRouteUnpacker() );
+        java8.util.Optional<Route<SaraNode, SaraEdge>> route;
+        try {
+            route = alg.route( metric, zeroSource, zeroTarget );
+        } catch ( IllegalArgumentException ex ) {
+            route = new DijkstraAlgorithm<SaraNode, SaraEdge>().route( metric, source, target );
+            if ( route.isPresent() ) {
+                System.out.println( "Route found by regular dijkstra, route = " + source.getId() + " -> " + target.getId() + ", zero = " + zeroSource.getId() + " -> " + zeroTarget.getId() );
+                System.out.println( "Route DKS: length = " + (int) route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + (int) route.get().calculateDistance( Metric.TIME ).getValue() + " s, from = " + route.get().getSource().getId() + ", to = " + route.get().getTarget().getId() + ", edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
+            }
+            throw ex;
+        }
+        System.out.println( "Route MLD: length = " + (int) route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + (int) route.get().calculateDistance( Metric.TIME ).getValue() + " s, from = " + route.get().getSource().getId() + ", to = " + route.get().getTarget().getId() + ", edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
+    }
 
     public void run() throws IOException {
         InputDAO inputDAO = new FileInputDAO();
-        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_length.txt" ) ) );
-        LatinSquareParameterSupplier supplier = new LatinSquareParameterSupplier();
-        LatinSquareParameterSupplier.LatinSquareParameterMessenger messenger = supplier.apply( 7 );
-        ParameterTuningStrategy strategy = new LatinSquareParameterTuningStrategy( messenger.getParameters(), messenger.getTestMatrix() );
+        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_rank_length.txt" ) ) );
+        ParameterSupplier supplier = new LatinSquareParameterSupplier();
+        ParameterSupplier.ParameterMessenger messenger = supplier.compute( 8, 7 );
+        ParameterTuningStrategy strategy = new CombinationParameterTuningStrategy( DEFAULT_OPTIONS, messenger.getParameters(), messenger.getTestMatrix()/* new int[][]{{0, 3, 6, 2, 5, 1, 4, 3}} */);
+//        ParameterTuningStrategy strategy = new IterativeParameterTuningStrategy( DEFAULT_OPTIONS, messenger.getParameters() );
         ParameterTuningController tuningController = new ParameterTuningController( loadProperties(), Arrays.asList( input ), strategy );
+        tuningController.setNumberOfRuns( 25 );
         tuningController.run();
     }
 
@@ -262,6 +347,10 @@ public class Main {
             String type = sc.next();
             if ( type.equals( "q" ) ) {
                 System.exit( 0 );
+            }
+            if ( !sc.hasNextLong() ) {
+                System.out.println( "Wrong input id: " + sc.next() );
+                continue;
             }
             long id = sc.nextLong();
             switch ( type ) {

@@ -1,10 +1,12 @@
 package cz.blahami2.routingsaratester.parametertuning.model;
 
 import cz.certicon.routing.model.values.Number;
+import lombok.ToString;
 
 /**
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
+@ToString
 public class IntNumber implements Number<IntNumber> {
 
     private long value;
@@ -74,7 +76,21 @@ public class IntNumber implements Number<IntNumber> {
 
     @Override
     public IntNumber multiply( IntNumber other ) {
-        return new IntNumber( value * other.value );
+        long a = value;
+        long b = other.value;
+        long ab = a * b;
+        if((a > 0 && b > 0) || a < 0 && b < 0){
+            if(ab <= 0){
+                ab = Long.MAX_VALUE;
+            }
+        } else if(a == 0 || b == 0) {
+            ab = 0;
+        } else {
+            if(ab >= 0){
+                ab = Long.MIN_VALUE + 1;
+            }
+        }
+        return new IntNumber( ab );
     }
 
     @Override

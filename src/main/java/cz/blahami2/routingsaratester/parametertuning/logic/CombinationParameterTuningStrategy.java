@@ -1,8 +1,10 @@
-package cz.blahami2.routingsaratester.parametertuning;
+package cz.blahami2.routingsaratester.parametertuning.logic;
 
+import cz.blahami2.routingsaratester.parametertuning.ParameterTuningStrategy;
 import cz.blahami2.routingsaratester.parametertuning.model.Parameter;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -12,14 +14,15 @@ import static cz.certicon.routing.utils.validation.Validation.*;
 /**
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
-public class LatinSquareParameterTuningStrategy implements ParameterTuningStrategy {
-    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 1000, 1, 0.1, 0.03, 0.6, 200, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3
+public class CombinationParameterTuningStrategy implements ParameterTuningStrategy {
 
+    private final PreprocessingInput defaultOptions;
     private final List<Parameter<? extends Comparable<?>>> parameters;
     private final int[][] testMatrix;
     private final Comparable<?>[][] inputMatrix;
 
-    public LatinSquareParameterTuningStrategy( List<Parameter<? extends Comparable<?>>> parameters, int[][] testMatrix ) {
+    public CombinationParameterTuningStrategy( PreprocessingInput defaultOptions, List<Parameter<? extends Comparable<?>>> parameters, int[][] testMatrix ) {
+        this.defaultOptions = defaultOptions;
         this.parameters = parameters;
         this.testMatrix = testMatrix;
         // assert testMatrix.length > 0
@@ -33,13 +36,13 @@ public class LatinSquareParameterTuningStrategy implements ParameterTuningStrate
         for ( int i = 0; i < parameters.size(); i++ ) {
             Parameter parameter = parameters.get( i );
             int finalI = i;
-            int max = Arrays.stream( testMatrix ).mapToInt( row -> row[finalI] ).max().getAsInt();
-            inputMatrix[i] = new Comparable<?>[max + 1];
-            int counter = 0;
+            ArrayList<Comparable<?>> list = new ArrayList<>();
             for ( Comparable<?> o : (Iterable<? extends Comparable<?>>) parameter.iterable() ) {
-                inputMatrix[i][counter++] = o;
+                list.add( o );
             }
-            validateThat( "Paameter has exactly matrix.max iterations", equalTo( counter, max + 1 ) );
+            int max = Arrays.stream( testMatrix ).mapToInt( row -> row[finalI] ).max().getAsInt();
+            validateThat( "Parameter[" + i + "] has lower than matrix.max iterations", greaterOrEqualTo( list.size(), max + 1 ) );
+            inputMatrix[i] = list.toArray( new Comparable<?>[list.size()] );
         }
 
     }
@@ -56,7 +59,7 @@ public class LatinSquareParameterTuningStrategy implements ParameterTuningStrate
 
             @Override
             public PreprocessingInput next() {
-                PreprocessingInput input = DEFAULT_OPTIONS;
+                PreprocessingInput input = defaultOptions;
                 int[] row = testMatrix[rowCounter++];
                 for ( int i = 0; i < parameters.size(); i++ ) {
                     Parameter parameter = parameters.get( i );

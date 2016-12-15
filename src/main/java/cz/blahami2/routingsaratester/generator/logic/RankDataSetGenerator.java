@@ -6,6 +6,7 @@ import cz.certicon.routing.model.graph.Edge;
 import cz.certicon.routing.model.graph.Graph;
 import cz.certicon.routing.model.graph.Metric;
 import cz.certicon.routing.model.graph.Node;
+import cz.certicon.routing.view.DebugViewer;
 import java8.util.Optional;
 import lombok.Setter;
 
@@ -20,12 +21,20 @@ public class RankDataSetGenerator implements DataSetGenerator {
 
     @Setter
     private int minRank;
+    @Setter
+    private DebugViewer debugViewer = null;
 
     /**
      * @param minRank starting Dijkstra's rank of the shortest path
      */
     public RankDataSetGenerator( int minRank ) {
         this.minRank = minRank;
+    }
+
+    @Override
+    public <N extends Node<N, E>, E extends Edge<N, E>> List<DataSetElement<N, E>> generateDataSet( int size, int granularity, Metric metric, Graph<N, E> graph, DebugViewer debugViewer ) {
+        this.debugViewer = debugViewer;
+        return generateDataSet( size, granularity, metric, graph );
     }
 
     public <N extends Node<N, E>, E extends Edge<N, E>> List<DataSetElement<N, E>> generateDataSet( int size, int granularity, Metric metric, Graph<N, E> graph ) {
@@ -35,6 +44,7 @@ public class RankDataSetGenerator implements DataSetGenerator {
         int maxRank = graph.getNodesCount();
         double multiplier = Math.pow( maxRank / minRank, 1.0 / ( intervals - 1 ) );
         OneToAllDijkstra algorithm = new OneToAllDijkstra();
+        algorithm.setDebugViewer( debugViewer );
         List<DataSetElement<N, E>> result = new ArrayList<>();
         for ( int i = minRank; i <= maxRank; i *= multiplier ) {
             int finalI = i;

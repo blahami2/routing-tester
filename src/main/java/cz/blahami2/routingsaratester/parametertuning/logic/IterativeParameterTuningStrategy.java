@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cz.blahami2.routingsaratester.parametertuning;
+package cz.blahami2.routingsaratester.parametertuning.logic;
 
+import cz.blahami2.routingsaratester.parametertuning.ParameterTuningStrategy;
 import cz.blahami2.routingsaratester.parametertuning.model.Parameter;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 
@@ -39,17 +40,18 @@ import java.util.*;
  */
 public class IterativeParameterTuningStrategy implements ParameterTuningStrategy {
 
-    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 1000, 1, 0.1, 0.03, 0.6, 200, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3
-    private final List<Parameter> parameters;
+      private final PreprocessingInput defaultOptions;
+    private final List<Parameter<? extends Comparable<?>>> parameters;
 
-    public IterativeParameterTuningStrategy( Collection<Parameter> parameters ) {
+    public IterativeParameterTuningStrategy(PreprocessingInput defaultOptions, Collection<Parameter<? extends Comparable<?>>> parameters ) {
+        this.defaultOptions = defaultOptions;
         this.parameters = new ArrayList<>( parameters );
     }
 
     @Override
     public Iterator<PreprocessingInput> preprocessingInputIterator() {
         return new Iterator<PreprocessingInput>() {
-            Iterator<Parameter> parameterIterator = parameters.iterator();
+            Iterator<Parameter<? extends Comparable<?>>> parameterIterator = parameters.iterator();
             Iterator<PreprocessingInput> preprocessingInputIterator = null;
 
             @Override
@@ -64,7 +66,7 @@ public class IterativeParameterTuningStrategy implements ParameterTuningStrategy
                     throw new IllegalStateException( "No more elements available" );
                 }
                 if ( preprocessingInputIterator == null || !preprocessingInputIterator.hasNext() ) {
-                    preprocessingInputIterator = parameterIterator.next().iterator( DEFAULT_OPTIONS );
+                    preprocessingInputIterator = parameterIterator.next().iterator( defaultOptions );
                 }
                 return preprocessingInputIterator.next();
             }

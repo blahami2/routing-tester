@@ -1,5 +1,6 @@
 package cz.blahami2.routingsaratester.parametertuning;
 
+import cz.blahami2.routingsaratester.parametertuning.logic.CombinationParameterTuningStrategy;
 import cz.blahami2.routingsaratester.parametertuning.model.Parameter;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import org.junit.Test;
@@ -12,7 +13,10 @@ import static org.junit.Assert.*;
 /**
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
-public class LatinSquareParameterTuningStrategyTest {
+public class CombinationParameterTuningStrategyTest {
+
+    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 10000, 1, 0.1, 0.03, 0.6, 1, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3
+
     @Test
     public void preprocessingInputIterator() throws Exception {
         Parameter<Integer> intParam = new Parameter<Integer>() {
@@ -59,7 +63,7 @@ public class LatinSquareParameterTuningStrategyTest {
                 return currentValue + 0.2;
             }
         };
-        LatinSquareParameterTuningStrategy instance = new LatinSquareParameterTuningStrategy( Arrays.asList( intParam, doubleParam ), new int[][]{ { 3, 1 }, { 0, 2 }, { 2, 0 }, { 1, 3 } } );
+        CombinationParameterTuningStrategy instance = new CombinationParameterTuningStrategy( DEFAULT_OPTIONS, Arrays.asList( intParam, doubleParam ), new int[][]{ { 3, 1 }, { 0, 2 }, { 2, 0 }, { 1, 3 } } );
         int[] intRes = new int[]{ 4, 1, 3, 2 };
         double[] doubleRes = new double[]{ 0.3, 0.5, 0.1, 0.7 };
         int cnt = 0;

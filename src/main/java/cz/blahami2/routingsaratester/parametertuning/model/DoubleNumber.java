@@ -2,10 +2,12 @@ package cz.blahami2.routingsaratester.parametertuning.model;
 
 import cz.certicon.routing.model.values.Number;
 import cz.certicon.routing.utils.DoubleComparator;
+import lombok.ToString;
 
 /**
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
+@ToString
 public class DoubleNumber implements Number<DoubleNumber> {
 
     private final double EPS = 10E-9;

@@ -10,7 +10,6 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- *
  * @author Michael Blaha {@literal <blahami2@gmail.com>}
  */
 @Value
@@ -31,4 +30,42 @@ public class TestResult {
     long examinedNodes;
     long relaxedEdges;
     long visitedEdges;
+
+    public TestResult add( TestResult testResult ) {
+        return new TestResult(
+                numberOfCells + testResult.getNumberOfCells(),
+                averageCellSize + testResult.getAverageCellSize(),
+                medianCellSize + testResult.medianCellSize,
+                maximalCellSize + testResult.getMaximalCellSize(),
+                minimalCellSize + testResult.getMinimalCellSize(),
+                numberOfCutEdges + testResult.getNumberOfCutEdges(),
+                validRatio + testResult.getValidRatio(),
+                filteringTime.add( testResult.getFilteringTime() ),
+                assemblyTime.add( testResult.getAssemblyTime() ),
+                routingTime.add( testResult.getRoutingTime() ),
+                unpackTime.add( testResult.getUnpackTime() ),
+                examinedNodes + testResult.getExaminedNodes(),
+                relaxedEdges + testResult.getRelaxedEdges(),
+                visitedEdges + testResult.getVisitedEdges()
+        );
+    }
+
+    public TestResult divide( int number ) {
+        return new TestResult(
+                numberOfCells / number,
+                averageCellSize / number,
+                medianCellSize / number,
+                maximalCellSize / number,
+                minimalCellSize / number,
+                numberOfCutEdges / number,
+                validRatio / number,
+                filteringTime.divide( number ),
+                assemblyTime.divide( number ),
+                routingTime.divide( number ),
+                unpackTime.divide( number ),
+                examinedNodes / number,
+                relaxedEdges / number,
+                visitedEdges / number
+        );
+    }
 }

@@ -11,12 +11,14 @@ import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.blahami2.routingsaratester.parametertuning.model.IntNumber;
 import cz.blahami2.routingsaratester.parametertuning.model.NumberAccumulator;
 import cz.blahami2.routingsaratester.testrunner.model.TestResult;
+import cz.certicon.routing.algorithm.DijkstraAlgorithm;
 import cz.certicon.routing.algorithm.RoutingAlgorithm;
 import cz.certicon.routing.algorithm.sara.preprocessing.BottomUpPreprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.algorithm.sara.preprocessing.Preprocessor;
 import cz.certicon.routing.algorithm.sara.preprocessing.overlay.*;
 import cz.certicon.routing.algorithm.sara.query.mld.MLDFullMemoryRouteUnpacker;
+import cz.certicon.routing.algorithm.sara.query.mld.MLDRecursiveRouteUnpacker;
 import cz.certicon.routing.algorithm.sara.query.mld.MultilevelDijkstraAlgorithm;
 import cz.certicon.routing.model.Route;
 import cz.certicon.routing.model.basic.IdSupplier;
@@ -34,6 +36,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import cz.certicon.routing.view.DebugViewer;
 import java8.util.Optional;
 import lombok.NonNull;
 import lombok.Setter;
@@ -75,7 +78,7 @@ public class TestRunner implements Runnable {
         testRunnerTime.start();
         // perform partitioning and crete sara graph
         Preprocessor preprocessor = preprocessorSupplier.get();
-        System.out.println( "Preprocessing..." );
+        System.out.println( "Preprocessing... input = " + input.toString() );
         SaraGraph saraGraph = preprocessor.preprocess( graph, input, new IdSupplier( 0 ), new SimpleProgressListener( 10 ) {
             @Override
             public void onProgressUpdate( double d ) {
@@ -104,8 +107,7 @@ public class TestRunner implements Runnable {
 
         // create overlay graph
         OverlayBuilderSetup overlayBuilderSetup = new OverlayBuilderSetup();
-        overlayBuilderSetup.setKeepSortcuts( false );
-        overlayBuilderSetup.setMetric( EnumSet.allOf( Metric.class ) );
+        overlayBuilderSetup.setKeepSortcuts( true );
         OverlayBuilder overlay = new OverlayBuilder( saraGraph, overlayBuilderSetup );
         overlay.buildOverlays();
 
@@ -132,24 +134,34 @@ public class TestRunner implements Runnable {
                 SaraNode target = saraGraph.getNodeById( x.getTargetNodeId() );
                 ZeroNode zeroSource = overlay.getZeroNode( source );
                 ZeroNode zeroTarget = overlay.getZeroNode( target );
-                Optional<Route<SaraNode, SaraEdge>> route = alg.route( Metric.LENGTH, zeroSource, zeroTarget );
-                // validate
-                java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
-                if ( route.isPresent() ) {
-                    boolean result = route.get().getEdgeList().stream()
-                            .mapToLong( e -> ( (Edge) e ).getId() )
-                            .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && e == edgeIdIterator.next() ) );
-                    if ( !result ) {
-                        System.out.println( "Routes do not match for id: " + x.getId() );
-                        System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
-                        System.out.println( "Route res: length = " + (int) route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + (int) route.get().calculateDistance( Metric.TIME ).getValue() + " s, edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
+                Optional<Route<SaraNode, SaraEdge>> route;
+                try {
+                    route = alg.route( ti.getMetric(), zeroSource, zeroTarget );
+                    // validate
+                    java.util.Iterator<Long> edgeIdIterator = x.getEdgeIds().iterator();
+                    if ( route.isPresent() ) {
+                        boolean result = route.get().getEdgeList().stream()
+                                .allMatch( ( e ) -> ( edgeIdIterator.hasNext() && equal( graph.getEdgeById( edgeIdIterator.next() ), e, ti.getMetric() ) ) );
+                        if ( !result ) {
+                            System.out.println( "Routes do not match for id: " + x.getId() );
+                            System.out.println( "Route ref: length = " + x.getLength() + ", time = " + x.getTime() + ", from = " + x.getSourceNodeId() + ", to = " + x.getTargetNodeId() + ", edges = " + x.getEdgeIds().stream().map( id -> id.toString() ).collect( Collectors.joining( " " ) ) );
+                            System.out.println( "Route res: length = " + (int) route.get().calculateDistance( Metric.LENGTH ).getValue() + ", time = " + (int) route.get().calculateDistance( Metric.TIME ).getValue() + " s, from = " + route.get().getSource().getId() + ", to = " + route.get().getTarget().getId() + ", edges = " + route.get().getEdgeList().stream().map( e -> ( (Edge) e ).getId() + "" ).collect( Collectors.joining( " " ) ) );
+                        } else {
+                            validCounter.increment();
+                        }
                     } else {
-                        validCounter.increment();
+                        System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );
+                        System.out.print( " (" + ( source.getId() ) + " -> " + ( target.getId() ) + ")" );
+                        System.out.println( ", not found " + notFoundCounter.increment() + "/" + allCounter.getValue() );
                     }
-                } else {
-                    System.out.print( "Route not found for: " + x.getSourceNodeId() + " -> " + x.getTargetNodeId() );
-                    System.out.print( " (" + ( source.getId() ) + " -> " + ( target.getId() ) + ")" );
-                    System.out.println( ", not found " + notFoundCounter.increment() + "/" + allCounter.getValue() );
+                } catch ( IllegalArgumentException ex ) {
+                    route = new DijkstraAlgorithm<SaraNode, SaraEdge>().route( ti.getMetric(), source, target );
+                    if ( route.isPresent() ) {
+                        System.out.println( "Route threw an IllegalArgumentException, but was found by regular dijkstra, route = " + source.getId() + " -> " + target.getId() + ", zero = " + zeroSource.getId() + " -> " + zeroTarget.getId() );
+                    } else {
+                        System.out.println( "Route not found by any algorithm: " + source.getId() + " -> " + target.getId() + ", zero = " + zeroSource.getId() + " -> " + zeroTarget.getId() );
+                        throw ex;
+                    }
                 }
 
                 // stats
@@ -170,6 +182,23 @@ public class TestRunner implements Runnable {
         testRunnerTime.setTimeUnits( TimeUnits.SECONDS );
         System.out.println( "Done in " + testRunnerTime.getCurrentTimeString() );
         result = builder.build();
+    }
+
+    public boolean equal( Edge e1, Edge e2, Metric metric ) {
+        if ( e1.getId() == e2.getId() ) {
+            return true;
+        }
+        if ( Math.abs( e1.getId() ) == Math.abs( e2.getId() ) ) {
+            return true;
+        }
+        if ( e1.getLength( metric ).equals( e2.getLength( metric ) ) ) {
+            if ( e1.getSource().getId() == e2.getSource().getId() ) {
+                return e1.getTarget().getId() == e2.getTarget().getId();
+            }
+            return e1.getSource().getId() == e2.getTarget().getId() && e1.getTarget().getId() == e2.getSource().getId();
+            // oneway?
+        }
+        return false;
     }
 
     public TestResult getResult() {

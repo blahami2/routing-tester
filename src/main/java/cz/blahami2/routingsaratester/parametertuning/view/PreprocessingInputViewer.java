@@ -28,9 +28,10 @@ public class PreprocessingInputViewer {
                 "#cut edges",
                 "filtering[ms]",
                 "assembly[ms]",
-                "length[ms]",
-                "time[ms]"
-        );
+                "routing[ms]",
+                "unpacking[ms]",
+                "valid"
+                );
     }
 
     public List<String> getData( PreprocessingInput preprocessingInput, TestResult result ) {
@@ -49,6 +50,9 @@ public class PreprocessingInputViewer {
         list.add( Integer.toString( result.getNumberOfCutEdges() ) );
         list.add( Long.toString( result.getFilteringTime().getValue( TimeUnits.MILLISECONDS ) ) );
         list.add( Long.toString( result.getAssemblyTime().getValue( TimeUnits.MILLISECONDS ) ) );
+        list.add( Long.toString( result.getRoutingTime().getValue( TimeUnits.MILLISECONDS ) ) );
+        list.add( Long.toString( result.getUnpackTime().getValue( TimeUnits.MILLISECONDS ) ) );
+        list.add( Double.toString( result.getValidRatio() ) );
         return list;
     }
 }

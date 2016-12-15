@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import cz.certicon.routing.view.DebugViewer;
 import java8.util.Optional;
 import lombok.Setter;
 
@@ -46,6 +47,11 @@ public class MetricDataSetGenerator implements DataSetGenerator {
     public MetricDataSetGenerator( int attemptsPerUnit, Distance estimatedMaximalDistance ) {
         this.attemptsPerUnit = attemptsPerUnit;
         this.estimatedMaximalDistance = estimatedMaximalDistance;
+    }
+
+    @Override
+    public <N extends Node<N, E>, E extends Edge<N, E>> List<DataSetElement<N, E>> generateDataSet( int size, int granularity, Metric metric, Graph<N, E> graph, DebugViewer debugViewer ) {
+        return generateDataSet( size, granularity, metric, graph );
     }
 
     @Override

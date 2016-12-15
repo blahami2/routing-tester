@@ -12,7 +12,9 @@ import cz.blahami2.routingsaratester.generator.model.DataSetElement;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.common.model.InputElement;
 import cz.certicon.routing.data.GraphDAO;
+import cz.certicon.routing.data.GraphDataDao;
 import cz.certicon.routing.data.SqliteGraphDAO;
+import cz.certicon.routing.data.SqliteGraphDataDAO;
 import cz.certicon.routing.data.basic.DataDestination;
 import cz.certicon.routing.model.Route;
 import cz.certicon.routing.model.graph.Edge;
@@ -23,6 +25,8 @@ import cz.certicon.routing.model.values.Length;
 import cz.certicon.routing.model.values.LengthUnits;
 import cz.certicon.routing.model.values.Time;
 import cz.certicon.routing.model.values.TimeUnits;
+import cz.certicon.routing.view.DebugViewer;
+import cz.certicon.routing.view.JxDebugViewer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,6 +61,9 @@ public class DataSetController implements Runnable {
     public void run() {
         try {
             Graph graph = loadGraph();
+//            DebugViewer debugViewer = new JxDebugViewer( new SqliteGraphDataDAO( loadProperties() ), graph, 1000 );
+//            debugViewer.setCentering( false );
+//            List<DataSetElement> dataSet = dataSetGenerator.generateDataSet( size, granularity, metric, graph, debugViewer );
             List<DataSetElement> dataSet = dataSetGenerator.generateDataSet( size, granularity, metric, graph );
             Input.Builder builder = Input.builder();
             int elementCounter = 1;
@@ -80,12 +87,16 @@ public class DataSetController implements Runnable {
     }
 
     private Graph loadGraph() throws IOException {
+        GraphDAO graphDAO = new SqliteGraphDAO( loadProperties() );
+        Graph graph = graphDAO.loadGraph();
+        return graph;
+    }
+
+    private Properties loadProperties() throws IOException {
         Properties properties = new Properties();
         try ( InputStream in = getClass().getClassLoader().getResourceAsStream( "spatialite.properties" ) ) {
             properties.load( in );
         }
-        GraphDAO graphDAO = new SqliteGraphDAO( properties );
-        Graph graph = graphDAO.loadGraph();
-        return graph;
+        return properties;
     }
 }
