@@ -11,6 +11,7 @@ import cz.blahami2.routingsaratester.common.data.InputDAO;
 import cz.blahami2.routingsaratester.common.model.Input;
 import cz.blahami2.routingsaratester.comparator.controller.ComparatorController;
 import cz.blahami2.routingsaratester.generator.logic.DataSetGenerator;
+import cz.blahami2.routingsaratester.generator.logic.MetricDataSetGenerator;
 import cz.blahami2.routingsaratester.generator.logic.RankDataSetGenerator;
 import cz.blahami2.routingsaratester.parametertuning.logic.CombinationParameterTuningStrategy;
 import cz.blahami2.routingsaratester.parametertuning.logic.IterativeParameterTuningStrategy;
@@ -93,7 +94,7 @@ public class Main {
         VIEW_WANDERING_NODES
     }
 
-    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 40, 1, 0.1, 0.03, 0.6, 10, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3
+    private static final PreprocessingInput DEFAULT_OPTIONS = new PreprocessingInput( 640, 0.4, 0.25, 0.045, 0.63, 8, 3 ); // 10000, 1, 0.1, 0.03, 0.6, 200, 3
 
     /**
      * @param args the command line arguments
@@ -202,13 +203,19 @@ public class Main {
 
     public void run() throws IOException {
         InputDAO inputDAO = new FileInputDAO();
-        Input input = inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_rank_length.txt" ) ) );
+        List<Input> inputs = new ArrayList<>(  );
+        inputs.add(inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_rank_length.txt" ) ) ));
+        inputs.add(inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_length.txt" ) ) ));
+        inputs.add(inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_rank_time.txt" ) ) ));
+        inputs.add(inputDAO.loadInput( new FileDataSource( new File( "dataset_cz_time.txt" ) ) ));
         ParameterSupplier supplier = new LatinSquareParameterSupplier();
         ParameterSupplier.ParameterMessenger messenger = supplier.compute( 8, 7 );
-        ParameterTuningStrategy strategy = new CombinationParameterTuningStrategy( DEFAULT_OPTIONS, messenger.getParameters(), messenger.getTestMatrix()/* new int[][]{{0, 3, 6, 2, 5, 1, 4, 3}} */);
-//        ParameterTuningStrategy strategy = new IterativeParameterTuningStrategy( DEFAULT_OPTIONS, messenger.getParameters() );
-        ParameterTuningController tuningController = new ParameterTuningController( loadProperties(), Arrays.asList( input ), strategy );
-        tuningController.setNumberOfRuns( 25 );
+//        ParameterTuningStrategy strategy = new CombinationParameterTuningStrategy( DEFAULT_OPTIONS, messenger.getParameters(), new int[][]{ { 2, 1, 3, 4, 2, 3, 2, 0 } } );
+//        ParameterTuningStrategy strategy = new CombinationParameterTuningStrategy( DEFAULT_OPTIONS, messenger.getParameters(), messenger.getTestMatrix() );
+        ParameterTuningStrategy strategy = new IterativeParameterTuningStrategy( DEFAULT_OPTIONS, supplier.getParameters( 7, 10 ) );
+        ParameterTuningController tuningController = new ParameterTuningController( loadProperties(), inputs, strategy );
+        tuningController.setNumberOfRuns( 10 );
+        tuningController.setSkip( 44 ); // N out of 80 done // always add 2 for unfinished cell size -> last row in doc - 1 // (+2 for cell size - 1 for header)
         tuningController.run();
     }
 
@@ -403,14 +410,14 @@ public class Main {
      * Generates dataset of given size
      */
     private void generate() {
-//        DataSetGenerator generator = new MetricDataSetGenerator( 100, Distance.newInstance( 250000 ) );
-        DataSetGenerator generator = new RankDataSetGenerator( 100 );
+        DataSetGenerator generator = new MetricDataSetGenerator( 100, Distance.newInstance( 7 * 3600 ) );
+//        DataSetGenerator generator = new RankDataSetGenerator( 100 );
         DataSetController controller = new DataSetController(
                 new FileInputDAO(),
-                new FileDataDestination( new File( "dataset_cz_rank_length.txt" ) ),
+                new FileDataDestination( new File( "dataset_cz_time.txt" ) ),
                 1000,
                 10,
-                Metric.LENGTH,
+                Metric.TIME,
                 generator
         );
         controller.run();

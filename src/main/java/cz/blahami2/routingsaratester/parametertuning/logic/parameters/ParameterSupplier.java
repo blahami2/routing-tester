@@ -3,8 +3,11 @@ package cz.blahami2.routingsaratester.parametertuning.logic.parameters;
 import cz.blahami2.routingsaratester.parametertuning.model.*;
 import cz.certicon.routing.algorithm.sara.preprocessing.PreprocessingInput;
 import cz.certicon.routing.model.values.Number;
+import cz.certicon.routing.utils.EffectiveUtils;
 import lombok.Value;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -13,12 +16,53 @@ import java.util.function.BiFunction;
  */
 public interface ParameterSupplier {
 
+
+    default List<Parameter<? extends Comparable<?>>> getParameters( int paramererCount, int valuesPerParameterCount ) {
+        List<Parameter<? extends Comparable<?>>> parameters = new ArrayList<>();
+        if ( paramererCount > 0 ) {
+            parameters.add( Parameters.cellRatio( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 1 ) {
+            parameters.add( Parameters.coreRatio( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 2 ) {
+            parameters.add( Parameters.cellSize( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 3 ) {
+            parameters.add( Parameters.lowIntervalLimit( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 4 ) {
+            parameters.add( Parameters.lowIntervalProbability( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 5 ) {
+            parameters.add( Parameters.numberOfAssemblyRuns( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 6 ) {
+            parameters.add( Parameters.numberOfLayers( valuesPerParameterCount ) );
+        }
+        if ( paramererCount > 7 ) {
+            parameters.add( Parameters.cellSizePerLevel( valuesPerParameterCount ) );
+        }
+        return parameters;
+    }
+
     ParameterMessenger compute( int parameterCount, int valuesPerParameterCount );
 
     @Value
     class ParameterMessenger {
         List<Parameter<? extends Comparable<?>>> parameters;
         int[][] testMatrix;
+
+        public int[][] getTestMatrix( int rows ) {
+            if ( rows >= testMatrix.length ) {
+                return testMatrix;
+            }
+            int[][] matrix = new int[rows][parameters.size()];
+            for ( int i = 0; i < rows; i++ ) {
+                EffectiveUtils.copyArray( testMatrix[i], matrix[i] );
+            }
+            return matrix;
+        }
     }
 
     class Parameters {
